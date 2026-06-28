@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.boxhilltravel.core.mapper.HolidaysFaqItemMapper">
+    <sql id="faqItemVoSelect">
+        select i.id,
+               i.group_id,
+               g.group_name as groupName,
+               i.module,
+               i.question,
+               i.answer,
+               i.sort_order,
+               i.status,
+               i.remark,
+               i.create_by,
+               i.create_time,
+               i.update_by,
+               i.update_time
+        from holidays_faq_item i
+        left join holidays_faq_group g on g.id = i.group_id
+    </sql>
+
+    <select id="selectFaqItemVoPage" resultType="com.boxhilltravel.core.domain.vo.HolidaysFaqItemVo">
+        <include refid="faqItemVoSelect"/>
+        <where>
+            <if test="bo != null and bo.groupId != null">
+                and i.group_id = #{bo.groupId}
+            </if>
+            <if test="bo != null and bo.module != null">
+                and i.module = #{bo.module}
+            </if>
+            <if test="bo != null and bo.question != null and bo.question != ''">
+                and i.question like concat('%', #{bo.question}, '%')
+            </if>
+            <if test="bo != null and bo.status != null and bo.status != ''">
+                and i.status = #{bo.status}
+            </if>
+        </where>
+        order by i.sort_order asc, i.id asc
+    </select>
+
+    <select id="selectFaqItemVoList" resultType="com.boxhilltravel.core.domain.vo.HolidaysFaqItemVo">
+        <include refid="faqItemVoSelect"/>
+        <where>
+            <if test="bo != null and bo.groupId != null">
+                and i.group_id = #{bo.groupId}
+            </if>
+            <if test="bo != null and bo.module != null">
+                and i.module = #{bo.module}
+            </if>
+            <if test="bo != null and bo.question != null and bo.question != ''">
+                and i.question like concat('%', #{bo.question}, '%')
+            </if>
+            <if test="bo != null and bo.status != null and bo.status != ''">
+                and i.status = #{bo.status}
+            </if>
+        </where>
+        order by i.sort_order asc, i.id asc
+    </select>
+
+    <select id="selectFaqItemVoById" resultType="com.boxhilltravel.core.domain.vo.HolidaysFaqItemVo">
+        <include refid="faqItemVoSelect"/>
+        where i.id = #{id}
+    </select>
+</mapper>
+
+
+

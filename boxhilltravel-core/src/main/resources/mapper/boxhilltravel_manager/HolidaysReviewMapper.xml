@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.boxhilltravel.core.mapper.HolidaysReviewMapper">
+    <sql id="reviewVoSelect">
+        select r.id,
+               r.tour_id as tourId,
+               t.name as tourName,
+               r.order_id as orderId,
+               r.customer_user_id as customerUserId,
+               r.nickname,
+               r.avatar,
+               r.title,
+               r.content,
+               r.rating,
+               r.source,
+               r.status,
+               r.featured,
+               r.sort_order as sortOrder,
+               r.published_at as publishedAt,
+               r.reject_reason as rejectReason,
+               r.create_time as createTime,
+               r.update_time as updateTime
+        from holidays_review r
+        left join holidays_tour t on t.id = r.tour_id
+    </sql>
+
+    <select id="selectReviewVoPage" resultType="com.boxhilltravel.core.domain.vo.HolidaysReviewVo">
+        <include refid="reviewVoSelect"/>
+        <where>
+            <if test="bo != null and bo.tourId != null">
+                and r.tour_id = #{bo.tourId}
+            </if>
+            <if test="bo != null and bo.tourName != null and bo.tourName != ''">
+                and t.name like concat('%', #{bo.tourName}, '%')
+            </if>
+            <if test="bo != null and bo.keyword != null and bo.keyword != ''">
+                and (r.title like concat('%', #{bo.keyword}, '%')
+                    or r.content like concat('%', #{bo.keyword}, '%'))
+            </if>
+            <if test="bo != null and bo.status != null">
+                and r.status = #{bo.status}
+            </if>
+            <if test="bo != null and bo.source != null">
+                and r.source = #{bo.source}
+            </if>
+            <if test="bo != null and bo.params != null and bo.params.beginPublishedAt != null and bo.params.beginPublishedAt != ''">
+                and r.published_at &gt;= #{bo.params.beginPublishedAt}
+            </if>
+            <if test="bo != null and bo.params != null and bo.params.endPublishedAt != null and bo.params.endPublishedAt != ''">
+                and r.published_at &lt;= #{bo.params.endPublishedAt}
+            </if>
+        </where>
+        order by r.create_time desc, r.id desc
+    </select>
+
+    <select id="selectReviewVoById" resultType="com.boxhilltravel.core.domain.vo.HolidaysReviewVo">
+        <include refid="reviewVoSelect"/>
+        where r.id = #{id}
+    </select>
+
+    <select id="selectPublishedReviewVoPage" resultType="com.boxhilltravel.core.domain.vo.HolidaysReviewVo">
+        <include refid="reviewVoSelect"/>
+        where r.tour_id = #{tourId}
+          and r.status = 1
+        order by r.published_at desc, r.id desc
+    </select>
+
+    <select id="selectHomeReviewVoList" resultType="com.boxhilltravel.core.domain.vo.HolidaysReviewVo">
+        <include refid="reviewVoSelect"/>
+        where r.status = 1
+        order by r.featured desc, r.sort_order asc, r.published_at desc, r.id desc
+        limit #{limit}
+    </select>
+
+    <select id="countPublishedByRating" resultType="java.lang.Long">
+        select count(1)
+        from holidays_review
+        where tour_id = #{tourId}
+          and status = 1
+          and rating = #{rating}
+    </select>
+
+    <select id="averagePublishedRating" resultType="java.lang.Double">
+        select avg(rating)
+        from holidays_review
+        where tour_id = #{tourId}
+          and status = 1
+    </select>
+</mapper>

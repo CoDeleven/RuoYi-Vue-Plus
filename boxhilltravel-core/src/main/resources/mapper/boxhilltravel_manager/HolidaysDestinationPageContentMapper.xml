@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.boxhilltravel.core.mapper.HolidaysDestinationPageContentMapper">
+    <select id="selectDestinationPageContentPage" resultType="com.boxhilltravel.core.domain.vo.HolidaysDestinationPageContentVo">
+        select h.id,
+               h.destination_id,
+               h.currency_dict_value,
+               h.language_dict_value,
+               h.time_zone_dict_value,
+               h.visa,
+               h.visa_title,
+               h.visa_note,
+               h.introduction_json,
+               h.highlights_json,
+               h.cities_json,
+               h.practical_info_json,
+               h.status,
+               h.create_time,
+               h.update_time,
+               h.remark,
+               d.name destination_name,
+               d.name_en destination_name_en,
+               d.image destination_image,
+               r.id region_id,
+               r.name region_name,
+               r.name_en region_name_en
+        from holidays_destination_page_content h
+        inner join holidays_destination d on d.id = h.destination_id and d.deleted_at is null and d.level = 2
+        left join holidays_destination r on r.id = d.parent_id and r.deleted_at is null
+        <where>
+            <if test="bo.id != null">
+                and h.id = #{bo.id}
+            </if>
+            <if test="bo.destinationId != null">
+                and h.destination_id = #{bo.destinationId}
+            </if>
+            <if test="bo.status != null">
+                and h.status = #{bo.status}
+            </if>
+            <if test="bo.destinationName != null and bo.destinationName != ''">
+                and (d.name like concat('%', #{bo.destinationName}, '%')
+                    or d.name_en like concat('%', #{bo.destinationName}, '%'))
+            </if>
+        </where>
+        order by h.update_time desc, h.id desc
+    </select>
+</mapper>

@@ -6,6 +6,7 @@ import cn.hutool.captcha.generator.MathGenerator;
 import cn.hutool.captcha.generator.RandomGenerator;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -104,15 +105,19 @@ public class CaptchaController {
      *
      * @param email 邮箱
      */
-    @RateLimiter(key = "#email", time = 60, count = 1)
+//    @RateLimiter(key = "#email", time = 60, count = 1)
     public void emailCodeImpl(String email) {
         String key = GlobalConstants.CAPTCHA_CODE_KEY + email;
         String code = RandomUtil.randomNumbers(4);
         try {
             MailBuilder.of()
                 .to(email)
-                .subject("登录验证码")
-                .text("您本次验证码为：" + code + "，有效性为" + Constants.CAPTCHA_EXPIRATION + "分钟，请尽快填写。")
+                .subject("Verification")
+                .text(StrUtil.format(
+                    """
+                        Your verification code is **{}**.
+                        This code is valid for **{} minutes**. Please enter it as soon as possible to complete your registration.
+                        For your security, do not share this code with anyone. If you did not request this verification, please ignore this message.""", code, Constants.CAPTCHA_EXPIRATION))
                 .send();
             RedisUtils.setCacheObject(key, code, Duration.ofMinutes(Constants.CAPTCHA_EXPIRATION));
         } catch (Exception e) {

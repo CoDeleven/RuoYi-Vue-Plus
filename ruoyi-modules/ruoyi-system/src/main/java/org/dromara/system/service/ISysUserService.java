@@ -140,6 +140,13 @@ public interface ISysUserService {
     void checkUserDataScope(Long userId);
 
     /**
+     * Validate that a user belongs to backend system user management.
+     *
+     * @param userId user id
+     */
+    void checkSysUser(Long userId);
+
+    /**
      * 新增用户信息
      *
      * @param user 用户信息

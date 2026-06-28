@@ -103,9 +103,9 @@ spring:
           driverClassName: com.mysql.cj.jdbc.Driver
           # jdbc 所有参数配置参考 https://lionli.blog.csdn.net/article/details/122018562
           # rewriteBatchedStatements=true 批处理优化 大幅提升批量插入更新删除性能(对数据库有性能损耗 使用批量操作应考虑性能问题)
-          url: jdbc:mysql://localhost:3306/ry-vue?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&autoReconnect=true&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://localhost:3306/boxhilltravel?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8&autoReconnect=true&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
           username: root
-          password: root
+          password: 111111
 #        # 从库数据源
 #        slave:
 #          lazy: true
@@ -157,8 +157,6 @@ spring.data:
     port: 6379
     # 数据库索引
     database: 0
-    # redis 密码必须配置
-    password: ruoyi123
     # 连接超时时间
     timeout: 10s
     # 是否开启ssl
@@ -189,25 +187,25 @@ redisson:
 
 --- # mail 邮件发送
 mail:
-  enabled: false
-  host: smtp.163.com
+  enabled: true
+  host: smtp.qiye.aliyun.com
   port: 465
   # 是否需要用户名密码验证
   auth: true
   # 发送方，遵循RFC-822标准
-  from: xxx@163.com
+  from: no-reply@boxhilltravel.com
   # 用户名（注意：如果使用foxmail邮箱，此处user为qq号）
-  user: xxx@163.com
+  user: ${MAIL_USERNAME}
   # 密码（注意，某些邮箱需要为SMTP服务单独设置密码，详情查看相关帮助）
-  pass: xxxxxxxxxx
+  pass: ${MAIL_PASSWORD}
   # 使用 STARTTLS安全连接，STARTTLS是对纯文本通信协议的扩展。
   starttlsEnable: true
   # 使用SSL安全连接
   sslEnable: true
   # SMTP超时时长，单位毫秒，缺省值不超时
-  timeout: 0
+  timeout: 60000
   # Socket连接超时值，单位毫秒，缺省值不超时
-  connectionTimeout: 0
+  connectionTimeout: 60000
 
 --- # sms 短信 支持 阿里云 腾讯云 云片 等等各式各样的短信服务商
 # https://sms4j.com/doc3/ 差异配置文档地址 支持单厂商多配置，可以配置多个同时使用
@@ -323,3 +321,18 @@ justauth:
       client-id: 10**********6
       client-secret: 1f7d08**********5b7**********29e
       redirect-uri: ${justauth.address}/social-callback?source=gitea
+    facebook:
+      client-id: ${facebook.client_id}
+      client-secret: ${facebook.secret}
+      redirect-uri: ${justauth.address}/login/facebook/callback?source=facebook
+      scopes:
+        - public_profile
+        - email
+    google:
+      client-id: ${google.client_id}
+      client-secret: ${google.secret}
+      redirect-uri: ${justauth.address}/login/google/callback?source=google
+      scopes:
+        - openid
+        - email
+        - profile

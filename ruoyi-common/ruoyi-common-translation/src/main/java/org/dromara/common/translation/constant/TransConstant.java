@@ -28,8 +28,14 @@ public interface TransConstant {
     String DICT_TYPE_TO_LABEL = "dict_type_to_label";
 
     /**
+     * 业务自定义-目的地id转名称
+     */
+    String DESTINATION_ID_TO_NAME = "destination_id_to_name";
+
+    /**
      * ossId转url
      */
     String OSS_ID_TO_URL = "oss_id_to_url";
+
 
 }

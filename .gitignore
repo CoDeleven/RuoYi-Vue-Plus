@@ -53,3 +53,7 @@ nbdist/
 
 application-local.yml
 application-ga.yml
+*.jks
+*.keystore
+*.p12
+*.pfx

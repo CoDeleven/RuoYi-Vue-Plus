@@ -1,11 +1,16 @@
 package org.dromara.web.service;
 
 import cn.hutool.crypto.digest.BCrypt;
+import com.boxhilltravel.core.domain.CustomerContactInfo;
+import com.boxhilltravel.core.domain.CustomerProfile;
+import com.boxhilltravel.core.mapper.CustomerContactInfoMapper;
+import com.boxhilltravel.core.mapper.CustomerProfileMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.constant.Constants;
 import org.dromara.common.core.constant.GlobalConstants;
 import org.dromara.common.core.enums.UserType;
+import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.exception.user.CaptchaException;
 import org.dromara.common.core.exception.user.CaptchaExpireException;
 import org.dromara.common.core.exception.user.UserException;
@@ -23,6 +28,9 @@ import org.dromara.system.domain.bo.SysUserBo;
 import org.dromara.system.mapper.SysUserMapper;
 import org.dromara.system.service.ISysUserService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 /**
  * 注册校验方法
@@ -35,6 +43,8 @@ public class SysRegisterService {
 
     private final ISysUserService userService;
     private final SysUserMapper userMapper;
+    private final CustomerProfileMapper customerProfileMapper;
+    private final CustomerContactInfoMapper customerContactInfoMapper;
     private final CaptchaProperties captchaProperties;
 
     /**
@@ -42,20 +52,27 @@ public class SysRegisterService {
      *
      * @param registerBody 注册请求参数
      */
+    @Transactional(rollbackFor = Exception.class)
     public void register(RegisterBody registerBody) {
-        String username = registerBody.getUsername();
+        UserType userTypeEnum = UserType.getUserType(StringUtils.blankToDefault(registerBody.getUserType(), UserType.SYS_USER.getUserType()));
+        boolean appUser = UserType.APP_USER == userTypeEnum;
+        String username = appUser ? normalizeEmail(registerBody.getEmail()) : registerBody.getUsername();
         String password = registerBody.getPassword();
         // 校验用户类型是否存在
-        String userType = UserType.getUserType(registerBody.getUserType()).getUserType();
+        String userType = userTypeEnum.getUserType();
 
         boolean captchaEnabled = captchaProperties.getEnable();
         // 验证码开关
-        if (captchaEnabled) {
+        if (captchaEnabled && !appUser) {
             validateCaptcha(username, registerBody.getCode(), registerBody.getUuid());
+        }
+        if (appUser) {
+            validateEmailCode(username, registerBody.getEmailCode());
         }
         SysUserBo sysUser = new SysUserBo();
         sysUser.setUserName(username);
         sysUser.setNickName(username);
+        sysUser.setEmail(appUser ? username : registerBody.getEmail());
         sysUser.setPassword(BCrypt.hashpw(password));
         sysUser.setUserType(userType);
 
@@ -65,11 +82,69 @@ public class SysRegisterService {
         if (exist) {
             throw new UserException("user.register.save.error", username);
         }
+        boolean emailExist = StringUtils.isNotBlank(sysUser.getEmail()) && userMapper.lambda()
+            .eq(SysUser::getEmail, sysUser.getEmail())
+            .exists();
+        if (emailExist) {
+            throw new ServiceException("Email address already exists");
+        }
         boolean regFlag = userService.registerUser(sysUser);
         if (!regFlag) {
             throw new UserException("user.register.error");
         }
+        if (appUser) {
+            initCustomerExtensions(username);
+        }
         recordLoginInfo(username, Constants.REGISTER, MessageUtils.message("user.register.success"));
+    }
+
+    private void validateEmailCode(String email, String emailCode) {
+        if (StringUtils.isBlank(emailCode)) {
+            throw new ServiceException("Email verification code cannot be empty");
+        }
+        String verifyKey = GlobalConstants.CAPTCHA_CODE_KEY + email;
+        String captcha = RedisUtils.getCacheObject(verifyKey);
+        RedisUtils.deleteObject(verifyKey);
+        if (captcha == null) {
+            throw new ServiceException("Email verification code has expired");
+        }
+        if (!StringUtils.equalsIgnoreCase(emailCode, captcha)) {
+            throw new ServiceException("Email verification code is incorrect");
+        }
+    }
+
+    private void initCustomerExtensions(String username) {
+        SysUser user = userMapper.lambda()
+            .eq(SysUser::getUserName, username)
+            .one();
+        if (user == null) {
+            throw new UserException("user.register.error");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (customerProfileMapper.selectById(user.getUserId()) == null) {
+            CustomerProfile profile = new CustomerProfile();
+            profile.setCustomerUserId(user.getUserId());
+            profile.setNickname(user.getNickName());
+            profile.setCreatedAt(now);
+            profile.setUpdatedAt(now);
+            customerProfileMapper.insert(profile);
+        }
+        if (customerContactInfoMapper.selectById(user.getUserId()) == null) {
+            CustomerContactInfo contactInfo = new CustomerContactInfo();
+            contactInfo.setCustomerUserId(user.getUserId());
+            contactInfo.setContactEmail(user.getEmail());
+            contactInfo.setCreatedAt(now);
+            contactInfo.setUpdatedAt(now);
+            customerContactInfoMapper.insert(contactInfo);
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        String value = StringUtils.trim(email);
+        if (StringUtils.isBlank(value)) {
+            throw new ServiceException("Email address cannot be empty");
+        }
+        return value.toLowerCase();
     }
 
     /**

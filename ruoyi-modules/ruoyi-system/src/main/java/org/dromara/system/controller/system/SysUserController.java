@@ -12,6 +12,7 @@ import org.dromara.common.core.constant.CacheNames;
 import org.dromara.common.core.constant.SystemConstants;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.domain.R;
+import org.dromara.common.core.enums.UserType;
 import org.dromara.common.core.utils.StreamUtils;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.encrypt.annotation.ApiEncrypt;
@@ -122,6 +123,9 @@ public class SysUserController extends BaseController {
     public R<UserInfoVo> getInfo() {
         UserInfoVo userInfoVo = new UserInfoVo();
         LoginUser loginUser = LoginHelper.getLoginUser();
+        if (!UserType.SYS_USER.getUserType().equals(loginUser.getUserType())) {
+            return R.fail("娌℃湁鏉冮檺璁块棶鐢ㄦ埛鏁版嵁!");
+        }
 
         SysUserVo user = DataPermissionHelper.ignore(() -> userService.selectUserById(loginUser.getUserId()));
         if (ObjectUtil.isNull(user)) {
@@ -144,6 +148,7 @@ public class SysUserController extends BaseController {
     public R<SysUserInfoVo> getInfo(@PathVariable(value = "userId", required = false) Long userId) {
         SysUserInfoVo userInfoVo = new SysUserInfoVo();
         if (ObjectUtil.isNotNull(userId)) {
+            userService.checkSysUser(userId);
             userService.checkUserDataScope(userId);
             SysUserVo sysUser = userService.selectUserById(userId);
             userInfoVo.setUser(sysUser);
@@ -198,6 +203,7 @@ public class SysUserController extends BaseController {
     @PutMapping
     public R<Void> edit(@Validated @RequestBody SysUserBo user) {
         userService.checkUserAllowed(user.getUserId());
+        userService.checkSysUser(user.getUserId());
         userService.checkUserDataScope(user.getUserId());
         deptService.checkDeptDataScope(user.getDeptId());
         if (!userService.checkUserNameUnique(user)) {
@@ -253,6 +259,7 @@ public class SysUserController extends BaseController {
     @PutMapping("/resetPwd")
     public R<Void> resetPwd(@RequestBody SysUserBo user) {
         userService.checkUserAllowed(user.getUserId());
+        userService.checkSysUser(user.getUserId());
         userService.checkUserDataScope(user.getUserId());
         user.setPassword(BCrypt.hashpw(user.getPassword()));
         return toAjax(userService.resetUserPwd(user.getUserId(), user.getPassword()));
@@ -270,6 +277,7 @@ public class SysUserController extends BaseController {
     @PutMapping("/changeStatus")
     public R<Void> changeStatus(@RequestBody SysUserBo user) {
         userService.checkUserAllowed(user.getUserId());
+        userService.checkSysUser(user.getUserId());
         userService.checkUserDataScope(user.getUserId());
         return toAjax(userService.updateUserStatus(user.getUserId(), user.getStatus()));
     }
@@ -285,6 +293,7 @@ public class SysUserController extends BaseController {
     @RepeatSubmit()
     @GetMapping("/unlock/{userId}")
     public R<Void> unlock(@PathVariable Long userId) {
+        userService.checkSysUser(userId);
         SysUserVo user = userService.selectUserById(userId);
         if (ObjectUtil.isNull(user)) {
             return R.fail("用户不存在");
@@ -305,6 +314,7 @@ public class SysUserController extends BaseController {
     @SaCheckPermission("system:user:query")
     @GetMapping("/authRole/{userId}")
     public R<SysUserInfoVo> authRole(@PathVariable Long userId) {
+        userService.checkSysUser(userId);
         userService.checkUserDataScope(userId);
         SysUserVo user = userService.selectUserById(userId);
         List<SysRoleVo> roles = roleService.selectRolesAuthByUserId(userId);
@@ -326,6 +336,7 @@ public class SysUserController extends BaseController {
     @RepeatSubmit()
     @PutMapping("/authRole")
     public R<Void> insertAuthRole(Long userId, Long[] roleIds) {
+        userService.checkSysUser(userId);
         userService.checkUserDataScope(userId);
         userService.insertUserAuth(userId, roleIds);
         return R.ok();

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.boxhilltravel.core.mapper.HolidaysFeaturedTourMapper">
+    <select id="selectFeaturedToursForCustomer" resultType="com.boxhilltravel.core.domain.HolidaysTour">
+        select t.id,
+               t.code,
+               t.name,
+               t.description,
+               t.duration_days,
+               t.travel_style,
+               t.service_level,
+               t.physical_rating,
+               t.trip_type,
+               t.min_age,
+               t.base_price,
+               t.sale_price,
+               t.single_supplement,
+               t.currency,
+               t.cover_image,
+               t.map_image,
+               t.notes,
+               t.status,
+               t.version,
+               t.seo_title,
+               t.seo_description,
+               t.seo_keywords,
+               t.deleted_at,
+               t.create_dept,
+               t.create_by,
+               t.create_time,
+               t.update_by,
+               t.update_time
+        from holidays_featured_tour h
+        inner join holidays_tour t on t.id = h.tour_id
+        where t.status = 1
+          and t.deleted_at is null
+        order by h.sort_order asc, h.id asc
+        <if test="limit != null and limit &gt; 0">
+            limit #{limit}
+        </if>
+    </select>
+</mapper>
+
+
+

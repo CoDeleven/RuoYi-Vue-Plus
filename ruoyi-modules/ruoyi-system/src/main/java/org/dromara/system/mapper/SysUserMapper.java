@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.yulichang.base.MPJBaseMapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.apache.ibatis.annotations.Param;
+import org.dromara.common.core.enums.UserType;
 import org.dromara.common.mybatis.annotation.DataColumn;
 import org.dromara.common.mybatis.annotation.DataPermission;
 import org.dromara.common.mybatis.core.mapper.BaseMapperPlus;
@@ -73,6 +74,7 @@ public interface SysUserMapper extends BaseMapperPlus<SysUser, SysUserVo>, MPJBa
             .selectAs("u1", SysUser::getUserName, SysUserExportVo::getLeaderName)
             .leftJoin(SysDept.class, "d", SysDept::getDeptId, SysUser::getDeptId)
             .leftJoin(SysUser.class, "u1", SysUser::getUserId, SysDept::getLeader)
+            .eq("u", SysUser::getUserType, UserType.SYS_USER.getUserType())
             .likeIfText("u", SysUser::getUserName, user.getUserName())
             .likeIfText("u", SysUser::getNickName, user.getNickName())
             .eqIfText("u", SysUser::getStatus, user.getStatus())
@@ -175,6 +177,7 @@ public interface SysUserMapper extends BaseMapperPlus<SysUser, SysUserVo>, MPJBa
             .leftJoin(SysDept.class, "d", SysDept::getDeptId, SysUser::getDeptId)
             .leftJoin(SysUserRole.class, "sur", SysUserRole::getUserId, SysUser::getUserId)
             .leftJoin(SysRole.class, "r", SysRole::getRoleId, SysUserRole::getRoleId)
+            .eq("u", SysUser::getUserType, UserType.SYS_USER.getUserType())
             .likeIfText("u", SysUser::getUserName, user.getUserName())
             .eqIfText("u", SysUser::getStatus, user.getStatus())
             .likeIfText("u", SysUser::getPhoneNumber, user.getPhoneNumber())

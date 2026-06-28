@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.boxhilltravel.core.mapper.HolidaysDestinationTagRelMapper">
+    <select id="selectDestinationTagPage" resultType="com.boxhilltravel.core.domain.vo.HolidaysDestinationTagRelVo">
+        select h.id,
+               h.destination_id,
+               h.dict_value,
+               h.sort_order,
+               h.create_time,
+               h.update_time,
+               d.name destination_name,
+               d.name_en destination_name_en,
+               d.level destination_level,
+               d.image destination_image,
+               d.description destination_description,
+               r.id region_id,
+               r.name region_name,
+               r.name_en region_name_en,
+               dd.dict_label,
+               dd.dict_sort
+        from holidays_destination_tag_rel h
+        left join holidays_destination d on d.id = h.destination_id and d.deleted_at is null
+        left join holidays_destination r on r.id = d.parent_id and r.deleted_at is null
+        left join sys_dict_data dd on dd.dict_value = h.dict_value and dd.dict_type = 'holidays_destination_tag'
+        <where>
+            <if test="bo.id != null">
+                and h.id = #{bo.id}
+            </if>
+            <if test="bo.destinationId != null">
+                and h.destination_id = #{bo.destinationId}
+            </if>
+            <if test="bo.dictValue != null and bo.dictValue != ''">
+                and h.dict_value = #{bo.dictValue}
+            </if>
+            <if test="bo.destinationName != null and bo.destinationName != ''">
+                and (d.name like concat('%', #{bo.destinationName}, '%')
+                    or d.name_en like concat('%', #{bo.destinationName}, '%'))
+            </if>
+        </where>
+        order by h.sort_order asc, h.id asc
+    </select>
+</mapper>

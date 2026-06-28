@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.constant.CacheNames;
 import org.dromara.common.core.constant.SystemConstants;
 import org.dromara.common.core.domain.PageResult;
+import org.dromara.common.core.enums.UserType;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.*;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -89,6 +90,7 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
         Map<String, Object> params = user.getParams();
         LambdaQueryWrapper<SysUser> wrapper = QueryBuilder.lambda(SysUser.class)
             .eq(SysUser::getDelFlag, SystemConstants.NORMAL)
+            .eq(SysUser::getUserType, UserType.SYS_USER.getUserType())
             .eqIfPresent(SysUser::getUserId, user.getUserId())
             .in(StringUtils.isNotBlank(user.getUserIds()), SysUser::getUserId, StringUtils.splitTo(user.getUserIds(), Convert::toLong))
             .likeIfText(SysUser::getUserName, user.getUserName())
@@ -141,7 +143,10 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
      */
     @Override
     public SysUserVo selectUserByUserName(String userName) {
-        return userMapper.lambda().eq(SysUser::getUserName, userName).voOne();
+        return userMapper.lambda()
+            .eq(SysUser::getUserName, userName)
+            .eq(SysUser::getUserType, UserType.SYS_USER.getUserType())
+            .voOne();
     }
 
     /**
@@ -183,6 +188,7 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
         return userMapper.selectUserList(userMapper.lambda()
             .select(SysUser::getUserId, SysUser::getUserName, SysUser::getNickName)
             .eq(SysUser::getStatus, SystemConstants.NORMAL)
+            .eq(SysUser::getUserType, UserType.SYS_USER.getUserType())
             .eqIfPresent(SysUser::getDeptId, deptId)
             .inIfNotEmpty(SysUser::getUserId, userIds)
             .build());
@@ -297,9 +303,29 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
      * @param user 用户信息
      * @return 结果
      */
+    /**
+     * Validate that the target user belongs to backend user management.
+     *
+     * @param userId user id
+     */
+    @Override
+    public void checkSysUser(Long userId) {
+        if (ObjectUtil.isNull(userId)) {
+            return;
+        }
+        boolean exists = userMapper.lambda()
+            .eq(SysUser::getUserId, userId)
+            .eq(SysUser::getUserType, UserType.SYS_USER.getUserType())
+            .exists();
+        if (!exists) {
+            throw new ServiceException("Only backend system users can be managed here");
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int insertUser(SysUserBo user) {
+        user.setUserType(UserType.SYS_USER.getUserType());
         SysUser sysUser = MapstructUtils.convert(user, SysUser.class);
         // 新增用户信息
         int rows = userMapper.insert(sysUser);
@@ -335,6 +361,8 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
     @CacheEvict(cacheNames = CacheNames.SYS_NICKNAME, key = "#user.userId")
     @Transactional(rollbackFor = Exception.class)
     public int updateUser(SysUserBo user) {
+        user.setUserType(UserType.SYS_USER.getUserType());
+        checkSysUser(user.getUserId());
         // 新增用户与角色管理
         insertUserRole(user, true);
         // 新增用户与岗位管理
@@ -357,6 +385,7 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void insertUserAuth(Long userId, Long[] roleIds) {
+        checkSysUser(userId);
         insertUserRole(userId, roleIds, true);
     }
 
@@ -369,9 +398,11 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
      */
     @Override
     public int updateUserStatus(Long userId, String status) {
+        checkSysUser(userId);
         return userMapper.lambda()
             .set(SysUser::getStatus, status)
             .eq(SysUser::getUserId, userId)
+            .eq(SysUser::getUserType, UserType.SYS_USER.getUserType())
             .updateCount();
     }
 
@@ -403,9 +434,11 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
      */
     @Override
     public int resetUserPwd(Long userId, String password) {
+        checkSysUser(userId);
         return userMapper.lambda()
             .set(SysUser::getPassword, password)
             .eq(SysUser::getUserId, userId)
+            .eq(SysUser::getUserType, UserType.SYS_USER.getUserType())
             .updateCount();
     }
 
@@ -507,6 +540,9 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteUserById(Long userId) {
+        checkUserAllowed(userId);
+        checkSysUser(userId);
+        checkUserDataScope(userId);
         // 删除用户与角色关联
         userRoleMapper.lambda().eq(SysUserRole::getUserId, userId).delete();
         // 删除用户与岗位表
@@ -530,6 +566,7 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
     public int deleteUserByIds(Long[] userIds) {
         for (Long userId : userIds) {
             checkUserAllowed(userId);
+            checkSysUser(userId);
             checkUserDataScope(userId);
         }
         List<Long> ids = List.of(userIds);
@@ -555,6 +592,7 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
     public List<SysUserVo> selectUserListByDept(Long deptId) {
         return userMapper.lambda()
             .eq(SysUser::getDeptId, deptId)
+            .eq(SysUser::getUserType, UserType.SYS_USER.getUserType())
             .orderByAsc(SysUser::getUserId)
             .voList();
     }

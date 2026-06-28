@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.boxhilltravel.core.mapper.HolidaysTourMapper">
+    <sql id="customerTourSelect">
+        select id,
+               code,
+               name,
+               description,
+               duration_days,
+               travel_style,
+               service_level,
+               physical_rating,
+               trip_type,
+               min_age,
+               base_price,
+               sale_price,
+               single_supplement,
+               currency,
+               cover_image,
+               map_image,
+               notes,
+               latest_arrival_time,
+               earliest_departure_time,
+               status,
+               version,
+               seo_title,
+               seo_description,
+               seo_keywords,
+               deleted_at,
+               create_dept,
+               create_by,
+               create_time,
+               update_by,
+               update_time
+        from holidays_tour
+    </sql>
+
+    <select id="selectCustomerTourPage" resultType="com.boxhilltravel.core.domain.HolidaysTour">
+        <include refid="customerTourSelect"/>
+        <where>
+            status = 1
+            and deleted_at is null
+            <if test="query != null and query.destinationIds != null and query.destinationIds.size() > 0">
+                and exists (
+                    select 1
+                    from holidays_tour_itinerary hti
+                    where hti.tour_id = holidays_tour.id
+                      and (
+                          hti.from_destination_id in
+                          <foreach collection="query.destinationIds" item="destinationId" open="(" separator="," close=")">
+                              #{destinationId}
+                          </foreach>
+                          or hti.to_destination_id in
+                          <foreach collection="query.destinationIds" item="destinationId" open="(" separator="," close=")">
+                              #{destinationId}
+                          </foreach>
+                      )
+                )
+            </if>
+            <if test="query != null and query.travelStyleList != null and query.travelStyleList.size() > 0">
+                and travel_style in
+                <foreach collection="query.travelStyleList" item="code" open="(" separator="," close=")">
+                    #{code}
+                </foreach>
+            </if>
+            <if test="query != null and query.collectionList != null and query.collectionList.size() > 0">
+                and exists (
+                    select 1
+                    from holidays_tour_tag_rel httr
+                    where httr.tour_id = holidays_tour.id
+                      and httr.dict_code in
+                      <foreach collection="query.collectionList" item="code" open="(" separator="," close=")">
+                          #{code}
+                      </foreach>
+                )
+            </if>
+            <if test="query != null and query.minDurationDays != null">
+                and duration_days &gt;= #{query.minDurationDays}
+            </if>
+            <if test="query != null and query.maxDurationDays != null">
+                and duration_days &lt;= #{query.maxDurationDays}
+            </if>
+            <if test="query != null and query.keyword != null and query.keyword != ''">
+                and (
+                    holidays_tour.code like concat('%', #{query.keyword}, '%')
+                    or holidays_tour.name like concat('%', #{query.keyword}, '%')
+                    or exists (
+                        select 1
+                        from holidays_tour_search hts
+                        where hts.tour_id = holidays_tour.id
+                          and hts.status = 1
+                          and (
+                              hts.code like concat('%', #{query.keyword}, '%')
+                              or hts.name like concat('%', #{query.keyword}, '%')
+                              or hts.search_text like concat('%', #{query.keyword}, '%')
+                          )
+                    )
+                )
+            </if>
+        </where>
+        <choose>
+            <when test="query != null and query.sortField != null and query.sortField != ''">
+                order by ${query.sortField}
+                <if test="query.sortDirection != null and query.sortDirection != ''">
+                    ${query.sortDirection}
+                </if>
+            </when>
+            <when test="query != null and query.keyword != null and query.keyword != ''">
+                order by
+                    case
+                        when holidays_tour.code = #{query.keyword} then 100
+                        when holidays_tour.code like concat(#{query.keyword}, '%') then 90
+                        when holidays_tour.name like concat(#{query.keyword}, '%') then 80
+                        when holidays_tour.name like concat('%', #{query.keyword}, '%') then 70
+                        when exists (
+                            select 1
+                            from holidays_tour_search hts
+                            where hts.tour_id = holidays_tour.id
+                              and hts.status = 1
+                              and hts.search_text like concat('%', #{query.keyword}, '%')
+                        ) then 60
+                        else 0
+                    end desc,
+                    id desc
+            </when>
+            <otherwise>
+                order by id desc
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectLowestPriceTourByDestinationIds" resultType="com.boxhilltravel.core.domain.HolidaysTour">
+        <include refid="customerTourSelect"/>
+        <where>
+            status = 1
+            and deleted_at is null
+            and (sale_price is not null or base_price is not null)
+            <choose>
+                <when test="destinationIds != null and destinationIds.size() > 0">
+                    and exists (
+                        select 1
+                        from holidays_tour_itinerary hti
+                        where hti.tour_id = holidays_tour.id
+                          and (
+                              hti.from_destination_id in
+                              <foreach collection="destinationIds" item="destinationId" open="(" separator="," close=")">
+                                  #{destinationId}
+                              </foreach>
+                              or hti.to_destination_id in
+                              <foreach collection="destinationIds" item="destinationId" open="(" separator="," close=")">
+                                  #{destinationId}
+                              </foreach>
+                          )
+                    )
+                </when>
+                <otherwise>
+                    and 1 = 0
+                </otherwise>
+            </choose>
+        </where>
+        order by coalesce(sale_price, base_price) asc, id desc
+        limit 1
+    </select>
+</mapper>
+

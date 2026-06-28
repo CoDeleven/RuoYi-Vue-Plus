@@ -117,7 +117,6 @@
     <!-- 依赖声明 -->
     <dependencyManagement>
         <dependencies>
-
             <!-- SpringBoot的依赖配置-->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -456,7 +455,22 @@
                 <artifactId>ruoyi-api</artifactId>
                 <version>${revision}</version>
             </dependency>
-
+            <!-- 自己的业务模块 -->
+            <dependency>
+                <groupId>com.boxhilltravel</groupId>
+                <artifactId>boxhilltravel-customer</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.boxhilltravel</groupId>
+                <artifactId>boxhilltravel-core</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.boxhilltravel</groupId>
+                <artifactId>boxhilltravel-manager</artifactId>
+                <version>${revision}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -471,6 +485,9 @@
         <module>ruoyi-modules</module>
         <!-- api模块 -->
         <module>ruoyi-api</module>
+        <module>boxhilltravel-manager</module>
+        <module>boxhilltravel-customer</module>
+        <module>boxhilltravel-core</module>
     </modules>
     <packaging>pom</packaging>
 
