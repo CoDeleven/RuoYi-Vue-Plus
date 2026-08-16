@@ -325,7 +325,7 @@ public class SysOssServiceImpl implements ISysOssService, OssService {
         OssClient instance = OssFactory.instance(oss.getService());
         // 仅修改桶类型为 private 的URL，临时URL时长为120s
         if (instance.verifyConfig(config -> AccessPolicy.PRIVATE.equals(config.accessControlPolicyConfig().accessPolicy()))) {
-            oss.setUrl(instance.presignGetUrl(oss.getFileName(), Duration.ofSeconds(120)));
+            oss.setUrl(instance.presignGetUrl(oss.getFileName(), Duration.ofDays(1)));
         }
         return oss;
     }
