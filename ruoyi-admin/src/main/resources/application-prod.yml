@@ -327,7 +327,6 @@ justauth:
       redirect-uri: ${justauth.address}/login/facebook/callback?source=facebook
       scopes:
         - public_profile
-        - email
     google:
       client-id: ${google.client_id}
       client-secret: ${google.secret}
