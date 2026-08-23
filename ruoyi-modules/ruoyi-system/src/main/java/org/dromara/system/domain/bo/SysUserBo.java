@@ -67,6 +67,9 @@ public class SysUserBo implements Serializable {
     @Size(min = 0, max = 50, message = "邮箱长度不能超过{max}个字符")
     private String email;
 
+    /** 邮箱是否已验证 */
+    private Boolean emailVerified;
+
     /**
      * 手机号码
      */
@@ -86,6 +89,9 @@ public class SysUserBo implements Serializable {
      * 密码
      */
     private String password;
+
+    /** 用户是否已主动设置密码 */
+    private Boolean passwordConfigured;
 
     /**
      * 账号状态（0正常 1停用）

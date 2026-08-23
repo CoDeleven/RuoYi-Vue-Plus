@@ -73,7 +73,9 @@ public class SysRegisterService {
         sysUser.setUserName(username);
         sysUser.setNickName(username);
         sysUser.setEmail(appUser ? username : registerBody.getEmail());
+        sysUser.setEmailVerified(appUser);
         sysUser.setPassword(BCrypt.hashpw(password));
+        sysUser.setPasswordConfigured(true);
         sysUser.setUserType(userType);
 
         boolean exist = userMapper.lambda()

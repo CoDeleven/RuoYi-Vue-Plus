@@ -59,6 +59,9 @@ public class SysUserVo implements Serializable {
     @Sensitive(strategy = SensitiveStrategy.EMAIL, perms = "system:user:edit")
     private String email;
 
+    /** 邮箱是否已验证 */
+    private Boolean emailVerified;
+
     /**
      * 手机号码
      */
@@ -87,6 +90,9 @@ public class SysUserVo implements Serializable {
     @JsonIgnore
     @JsonProperty
     private String password;
+
+    /** 用户是否已主动设置密码 */
+    private Boolean passwordConfigured;
 
     /**
      * 账号状态（0正常 1停用）

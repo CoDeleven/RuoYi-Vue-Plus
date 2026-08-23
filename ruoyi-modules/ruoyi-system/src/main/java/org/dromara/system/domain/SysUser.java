@@ -53,6 +53,11 @@ public class SysUser extends BaseEntity {
     private String email;
 
     /**
+     * 邮箱是否已验证
+     */
+    private Boolean emailVerified;
+
+    /**
      * 手机号码
      */
     private String phoneNumber;
@@ -76,6 +81,11 @@ public class SysUser extends BaseEntity {
         whereStrategy = FieldStrategy.NOT_EMPTY
     )
     private String password;
+
+    /**
+     * 用户是否已主动设置密码
+     */
+    private Boolean passwordConfigured;
 
     /**
      * 账号状态（0正常 1停用）
