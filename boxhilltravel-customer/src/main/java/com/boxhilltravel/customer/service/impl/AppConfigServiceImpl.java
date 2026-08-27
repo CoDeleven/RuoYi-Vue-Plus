@@ -67,6 +67,7 @@ public class AppConfigServiceImpl implements IAppConfigService {
 
     private List<SortedItemVo> buildTravelSortMethodsItems() {
         return List.of(
+            new SortedItemVo("created_at,desc", "Relevance", ""),
             new SortedItemVo("sale_price,desc", "Price: High to Low", ""),
             new SortedItemVo("sale_price,asc", "Price: Low to High", ""),
             new SortedItemVo("duration_days,desc", "Duration Longest First", ""),

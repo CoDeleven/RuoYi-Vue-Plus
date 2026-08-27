@@ -7,7 +7,9 @@ import com.boxhilltravel.customer.domain.vo.HotDealTourVo;
 import com.boxhilltravel.customer.domain.vo.TourDetailVo;
 import com.boxhilltravel.customer.domain.vo.TourListItemVo;
 import com.boxhilltravel.customer.service.IHolidaysTourCustomerService;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.domain.R;
@@ -43,6 +45,14 @@ public class HolidaysTourApi extends BaseController {
     @GetMapping("/detail/{id}")
     public R<TourDetailVo> detail(@NotNull(message = "Tour id is required") @PathVariable Long id) {
         return R.ok(holidaysTourCustomerService.queryDetail(id));
+    }
+
+    @GetMapping("/detail/code/{code}")
+    public R<TourDetailVo> detailByCode(
+        @NotBlank(message = "Tour code is required")
+        @Size(max = 64, message = "Tour code cannot exceed 64 characters")
+        @PathVariable String code) {
+        return R.ok(holidaysTourCustomerService.queryDetailByCode(code));
     }
 
     @GetMapping("/hot")

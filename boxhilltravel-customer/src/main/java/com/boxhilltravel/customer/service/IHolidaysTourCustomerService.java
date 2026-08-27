@@ -18,6 +18,8 @@ public interface IHolidaysTourCustomerService {
 
     TourDetailVo queryDetail(Long id);
 
+    TourDetailVo queryDetailByCode(String code);
+
     List<HotDealTourVo> queryHotTours(Integer limit);
 
     List<FeaturedTourVo> queryFeaturedTours(Integer limit);

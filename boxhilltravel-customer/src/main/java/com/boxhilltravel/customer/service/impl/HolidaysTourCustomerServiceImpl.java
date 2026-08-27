@@ -80,10 +80,25 @@ public class HolidaysTourCustomerServiceImpl implements IHolidaysTourCustomerSer
 
     @Override
     public TourDetailVo queryDetail(Long id) {
-        HolidaysTour tour = tourMapper.selectById(id);
+        return buildDetail(tourMapper.selectById(id));
+    }
+
+    @Override
+    public TourDetailVo queryDetailByCode(String code) {
+        String normalizedCode = StringUtils.trim(code);
+        if (StringUtils.isBlank(normalizedCode) || normalizedCode.length() > 64) {
+            return null;
+        }
+        HolidaysTour tour = tourMapper.selectOne(Wrappers.lambdaQuery(HolidaysTour.class)
+            .eq(HolidaysTour::getCode, normalizedCode));
+        return buildDetail(tour);
+    }
+
+    private TourDetailVo buildDetail(HolidaysTour tour) {
         if (!isActiveTour(tour)) {
             return null;
         }
+        Long id = tour.getId();
         TourDetailVo vo = toDetailVo(tour);
         List<HolidaysTourItinerary> itineraries = queryItineraries(id);
         List<HolidaysTourItineraryActivity> activities = activityMapper.selectList(Wrappers.lambdaQuery(HolidaysTourItineraryActivity.class)
