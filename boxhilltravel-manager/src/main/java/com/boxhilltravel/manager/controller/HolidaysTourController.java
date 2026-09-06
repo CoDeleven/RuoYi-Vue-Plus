@@ -1,9 +1,14 @@
 package com.boxhilltravel.manager.controller;
 
+import java.nio.file.Paths;
 import java.util.List;
 
 import com.boxhilltravel.core.domain.bo.HolidaysTourBo;
 import com.boxhilltravel.core.domain.vo.HolidaysTourVo;
+import com.boxhilltravel.manager.tool.tourimage.MigrationSummary;
+import com.boxhilltravel.manager.tool.tourimage.TourImageMigrationOptions;
+import com.boxhilltravel.manager.tool.tourimage.TourImageMigrationService;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.constraints.*;
 import cn.dev33.satoken.annotation.SaCheckPermission;
@@ -99,6 +104,16 @@ public class HolidaysTourController extends BaseController {
     public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysTourService.deleteWithValidByIds(List.of(ids), true));
+    }
+
+    @Resource
+    private TourImageMigrationService migrationService;
+
+    @PostMapping("/migrate")
+    public R<MigrationSummary> migrate(@RequestBody TourImageMigrationOptions options) {
+        options.setReportFile(Paths.get("script", "logs", "tour-image-migration-" + System.currentTimeMillis() + ".csv"));
+        MigrationSummary summary = migrationService.migrate(options);
+        return R.ok(summary);
     }
 }
 
