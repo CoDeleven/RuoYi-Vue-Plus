@@ -54,7 +54,7 @@ public class HolidaysHotDealTourController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel-manager:hot_deal_tour:query")
     @GetMapping("/{id}")
-    public R<HolidaysHotDealTourVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysHotDealTourVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysHotDealTourService.queryById(id));
     }
@@ -63,7 +63,7 @@ public class HolidaysHotDealTourController extends BaseController {
      * 新增热卖线路
      */
     @SaCheckPermission("boxhilltravel-manager:hot_deal_tour:add")
-    @Log(title = "热卖线路", businessType = BusinessType.INSERT)
+    @Log(title = "Hot Deal Tour", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysHotDealTourBo bo) {
@@ -74,7 +74,7 @@ public class HolidaysHotDealTourController extends BaseController {
      * 修改热卖线路
      */
     @SaCheckPermission("boxhilltravel-manager:hot_deal_tour:edit")
-    @Log(title = "热卖线路", businessType = BusinessType.UPDATE)
+    @Log(title = "Hot Deal Tour", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysHotDealTourBo bo) {
@@ -89,9 +89,9 @@ public class HolidaysHotDealTourController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel-manager:hot_deal_tour:remove")
-    @Log(title = "热卖线路", businessType = BusinessType.DELETE)
+    @Log(title = "Hot Deal Tour", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysHotDealTourService.deleteWithValidByIds(List.of(ids), true));
     }

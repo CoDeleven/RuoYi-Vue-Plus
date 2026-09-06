@@ -26,30 +26,30 @@ public class HolidaysReviewBo implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @NotNull(message = "Review id is required", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.reviewId.required}", groups = { EditGroup.class })
     private Long id;
 
-    @NotNull(message = "Tour is required", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.tourId.required}", groups = { AddGroup.class, EditGroup.class })
     private Long tourId;
 
     private Long orderId;
 
     private Long customerUserId;
 
-    @NotBlank(message = "Nickname is required", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.nickname.required}", groups = { AddGroup.class, EditGroup.class })
     private String nickname;
 
     private String avatar;
 
-    @NotBlank(message = "Title is required", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.title.required}", groups = { AddGroup.class, EditGroup.class })
     private String title;
 
-    @NotBlank(message = "Content is required", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.content.required}", groups = { AddGroup.class, EditGroup.class })
     private String content;
 
-    @NotNull(message = "Rating is required", groups = { AddGroup.class, EditGroup.class })
-    @Min(value = 1, message = "Rating must be at least 1", groups = { AddGroup.class, EditGroup.class })
-    @Max(value = 5, message = "Rating cannot exceed 5", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.rating.required}", groups = { AddGroup.class, EditGroup.class })
+    @Min(value = 1, message = "{boxhilltravel.validation.rating.min}", groups = { AddGroup.class, EditGroup.class })
+    @Max(value = 5, message = "{boxhilltravel.validation.rating.max}", groups = { AddGroup.class, EditGroup.class })
     private Integer rating;
 
     private Integer source;

@@ -25,19 +25,19 @@ public class HolidaysHotDealTourBo implements Serializable {
     /**
      * 主键ID
      */
-    @NotNull(message = "主键ID不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.primaryKey.required}", groups = { EditGroup.class })
     private Long id;
 
     /**
      * 线路ID，引用 holidays_tour.id
      */
-    @NotNull(message = "线路ID，引用 holidays_tour.id不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.referencedTourId.required}", groups = { AddGroup.class, EditGroup.class })
     private Long tourId;
 
     /**
      * 展示顺序，数值越小越靠前
      */
-    @NotNull(message = "展示顺序，数值越小越靠前不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.displayOrder.required}", groups = { AddGroup.class, EditGroup.class })
     private Integer sortOrder;
 
 

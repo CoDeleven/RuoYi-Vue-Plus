@@ -25,13 +25,13 @@ public class HolidaysFaqItemBo implements Serializable {
     /**
      * 主键ID
      */
-    @NotNull(message = "主键ID不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.primaryKey.required}", groups = { EditGroup.class })
     private Long id;
 
     /**
      * 分组ID
      */
-    @NotNull(message = "分组ID不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.groupId.required}", groups = { AddGroup.class, EditGroup.class })
     private Long groupId;
 
     /**
@@ -42,7 +42,7 @@ public class HolidaysFaqItemBo implements Serializable {
     /**
      * 问题
      */
-    @NotBlank(message = "问题不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.question.required}", groups = { AddGroup.class, EditGroup.class })
     private String question;
 
     /**

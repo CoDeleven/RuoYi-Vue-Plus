@@ -54,7 +54,7 @@ public class HolidaysTourServiceItemController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:tour_service_item:query")
     @GetMapping("/{id}")
-    public R<HolidaysTourServiceItemVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysTourServiceItemVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysTourServiceItemService.queryById(id));
     }
@@ -63,7 +63,7 @@ public class HolidaysTourServiceItemController extends BaseController {
      * 新增线路服务项
      */
     @SaCheckPermission("boxhilltravel_manager:tour_service_item:add")
-    @Log(title = "线路服务项", businessType = BusinessType.INSERT)
+    @Log(title = "Tour Service Item", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysTourServiceItemBo bo) {
@@ -74,7 +74,7 @@ public class HolidaysTourServiceItemController extends BaseController {
      * 修改线路服务项
      */
     @SaCheckPermission("boxhilltravel_manager:tour_service_item:edit")
-    @Log(title = "线路服务项", businessType = BusinessType.UPDATE)
+    @Log(title = "Tour Service Item", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysTourServiceItemBo bo) {
@@ -89,9 +89,9 @@ public class HolidaysTourServiceItemController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel_manager:tour_service_item:remove")
-    @Log(title = "线路服务项", businessType = BusinessType.DELETE)
+    @Log(title = "Tour Service Item", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysTourServiceItemService.deleteWithValidByIds(List.of(ids), true));
     }

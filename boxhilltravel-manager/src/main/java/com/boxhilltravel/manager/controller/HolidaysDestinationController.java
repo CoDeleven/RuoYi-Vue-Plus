@@ -74,7 +74,7 @@ public class HolidaysDestinationController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:destination:query")
     @GetMapping("/{id}")
-    public R<HolidaysDestinationVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysDestinationVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysDestinationService.queryById(id));
     }
@@ -83,7 +83,7 @@ public class HolidaysDestinationController extends BaseController {
      * 新增目的地分类
      */
     @SaCheckPermission("boxhilltravel_manager:destination:add")
-    @Log(title = "目的地分类", businessType = BusinessType.INSERT)
+    @Log(title = "Destination", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysDestinationBo bo) {
@@ -94,7 +94,7 @@ public class HolidaysDestinationController extends BaseController {
      * 修改目的地分类
      */
     @SaCheckPermission("boxhilltravel_manager:destination:edit")
-    @Log(title = "目的地分类", businessType = BusinessType.UPDATE)
+    @Log(title = "Destination", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysDestinationBo bo) {
@@ -109,9 +109,9 @@ public class HolidaysDestinationController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel_manager:destination:remove")
-    @Log(title = "目的地分类", businessType = BusinessType.DELETE)
+    @Log(title = "Destination", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysDestinationService.deleteWithValidByIds(List.of(ids), true));
     }

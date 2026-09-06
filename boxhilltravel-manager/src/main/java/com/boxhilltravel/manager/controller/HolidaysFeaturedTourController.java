@@ -54,7 +54,7 @@ public class HolidaysFeaturedTourController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:featured_tour:query")
     @GetMapping("/{id}")
-    public R<HolidaysFeaturedTourVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysFeaturedTourVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysFeaturedTourService.queryById(id));
     }
@@ -63,7 +63,7 @@ public class HolidaysFeaturedTourController extends BaseController {
      * 新增精选线路
      */
     @SaCheckPermission("boxhilltravel_manager:featured_tour:add")
-    @Log(title = "精选线路", businessType = BusinessType.INSERT)
+    @Log(title = "Featured Tour", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysFeaturedTourBo bo) {
@@ -74,7 +74,7 @@ public class HolidaysFeaturedTourController extends BaseController {
      * 修改精选线路
      */
     @SaCheckPermission("boxhilltravel_manager:featured_tour:edit")
-    @Log(title = "精选线路", businessType = BusinessType.UPDATE)
+    @Log(title = "Featured Tour", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysFeaturedTourBo bo) {
@@ -86,7 +86,7 @@ public class HolidaysFeaturedTourController extends BaseController {
      * 调整精选线路排序
      */
     @SaCheckPermission("boxhilltravel_manager:featured_tour:edit")
-    @Log(title = "精选线路", businessType = BusinessType.UPDATE)
+    @Log(title = "Featured Tour", businessType = BusinessType.UPDATE)
     @PutMapping("/updateSort")
     public R<Void> updateSort(@RequestBody HolidaysFeaturedTourBo bo) {
         return toAjax(holidaysFeaturedTourService.updateSort(bo.getId(), bo.getSortOrder()));
@@ -98,9 +98,9 @@ public class HolidaysFeaturedTourController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel_manager:featured_tour:remove")
-    @Log(title = "精选线路", businessType = BusinessType.DELETE)
+    @Log(title = "Featured Tour", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysFeaturedTourService.deleteWithValidByIds(List.of(ids), true));
     }

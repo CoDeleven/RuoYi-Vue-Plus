@@ -22,7 +22,7 @@ public class I18nLocaleResolver implements LocaleResolver {
     @Override
     public Locale resolveLocale(HttpServletRequest httpServletRequest) {
         String language = httpServletRequest.getHeader("content-language");
-        Locale locale = Locale.getDefault();
+        Locale locale = Locale.US;
         if (language != null && !language.isEmpty()) {
             locale = Locale.forLanguageTag(language.replace('_', '-'));
         }

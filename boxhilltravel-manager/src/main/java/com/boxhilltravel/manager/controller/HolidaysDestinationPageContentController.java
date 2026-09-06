@@ -48,7 +48,7 @@ public class HolidaysDestinationPageContentController extends BaseController {
 
     @SaCheckPermission("boxhilltravel_manager:destination_page_content:query")
     @GetMapping("/{id}")
-    public R<HolidaysDestinationPageContentVo> getInfo(@NotNull(message = "id is required") @PathVariable Long id) {
+    public R<HolidaysDestinationPageContentVo> getInfo(@NotNull(message = "{boxhilltravel.validation.id.required}") @PathVariable Long id) {
         return R.ok(destinationPageContentService.queryById(id));
     }
 
@@ -78,16 +78,16 @@ public class HolidaysDestinationPageContentController extends BaseController {
     @SaCheckPermission("boxhilltravel_manager:destination_page_content:remove")
     @Log(title = "Destination Page Content", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "id is required") @PathVariable Long[] ids) {
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.id.required}") @PathVariable Long[] ids) {
         return toAjax(destinationPageContentService.deleteWithValidByIds(List.of(ids), true));
     }
 
     @Data
     public static class ChangeStatusBo {
-        @NotNull(message = "id is required")
+        @NotNull(message = "{boxhilltravel.validation.id.required}")
         private Long id;
 
-        @NotNull(message = "status is required")
+        @NotNull(message = "{boxhilltravel.validation.status.required}")
         private Long status;
     }
 

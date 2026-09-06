@@ -17,6 +17,7 @@ import com.boxhilltravel.manager.event.TourSearchRebuildEvent;
 import com.boxhilltravel.manager.service.IHolidaysTourService;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.exception.ServiceException;
+import org.dromara.common.core.utils.MessageUtils;
 import org.dromara.common.core.utils.MapstructUtils;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -260,7 +261,7 @@ public class HolidaysTourServiceImpl implements IHolidaysTourService {
             .eq(SysDictData::getDictValue, collectionTag)
             .count();
         if (count == null || count == 0) {
-            throw new ServiceException("CollectionTag不存在");
+            throw new ServiceException(MessageUtils.message("boxhilltravel.error.collectionTag.notFound"));
         }
     }
 

@@ -39,7 +39,7 @@ public class HolidaysOrderController extends BaseController {
 
     @SaCheckPermission("boxhilltravel_manager:order:query")
     @GetMapping("/{id}")
-    public R<HolidaysOrderVo> getInfo(@NotNull(message = "Order id is required") @PathVariable Long id) {
+    public R<HolidaysOrderVo> getInfo(@NotNull(message = "{boxhilltravel.validation.orderId.required}") @PathVariable Long id) {
         return R.ok(holidaysOrderService.queryById(id));
     }
 
@@ -47,7 +47,7 @@ public class HolidaysOrderController extends BaseController {
     @Log(title = "Order mark completed", businessType = BusinessType.UPDATE)
     @RepeatSubmit
     @PutMapping("/{id}/markCompleted")
-    public R<Void> markCompleted(@NotNull(message = "Order id is required") @PathVariable Long id) {
+    public R<Void> markCompleted(@NotNull(message = "{boxhilltravel.validation.orderId.required}") @PathVariable Long id) {
         return toAjax(holidaysOrderService.markCompleted(id));
     }
 

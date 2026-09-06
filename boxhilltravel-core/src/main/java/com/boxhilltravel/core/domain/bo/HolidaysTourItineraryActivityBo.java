@@ -25,31 +25,31 @@ public class HolidaysTourItineraryActivityBo implements Serializable {
     /**
      *
      */
-    @NotNull(message = "不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.primaryKey.required}", groups = { EditGroup.class })
     private Long id;
 
     /**
      * 行程ID
      */
-    @NotNull(message = "行程ID不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.itineraryId.required}", groups = { AddGroup.class, EditGroup.class })
     private Long itineraryId;
 
     /**
      * 线路ID
      */
-    @NotNull(message = "线路ID不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.tourId.required}", groups = { AddGroup.class, EditGroup.class })
     private Long tourId;
 
     /**
      * 标题
      */
-    @NotBlank(message = "标题不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.title.required}", groups = { AddGroup.class, EditGroup.class })
     private String title;
 
     /**
      * 描述
      */
-    @NotBlank(message = "描述不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.description.required}", groups = { AddGroup.class, EditGroup.class })
     private String description;
 
     /**
@@ -65,13 +65,13 @@ public class HolidaysTourItineraryActivityBo implements Serializable {
     /**
      *
      */
-    @NotNull(message = "不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.primaryKey.required}", groups = { AddGroup.class, EditGroup.class })
     private Integer sortOrder;
 
     /**
      * 是否在预览时展示：0不展示，1展示
      */
-    @NotNull(message = "是否在预览时展示：0不展示，1展示不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.preview.required}", groups = { AddGroup.class, EditGroup.class })
     private Long showInPreview;
 
 

@@ -54,7 +54,7 @@ public class HolidaysTourItineraryController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:tour_itinerary:query")
     @GetMapping("/{id}")
-    public R<HolidaysTourItineraryVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysTourItineraryVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysTourItineraryService.queryById(id));
     }
@@ -63,7 +63,7 @@ public class HolidaysTourItineraryController extends BaseController {
      * 新增行程
      */
     @SaCheckPermission("boxhilltravel_manager:tour_itinerary:add")
-    @Log(title = "行程", businessType = BusinessType.INSERT)
+    @Log(title = "Itinerary", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysTourItineraryBo bo) {
@@ -74,7 +74,7 @@ public class HolidaysTourItineraryController extends BaseController {
      * 修改行程
      */
     @SaCheckPermission("boxhilltravel_manager:tour_itinerary:edit")
-    @Log(title = "行程", businessType = BusinessType.UPDATE)
+    @Log(title = "Itinerary", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysTourItineraryBo bo) {
@@ -89,9 +89,9 @@ public class HolidaysTourItineraryController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel_manager:tour_itinerary:remove")
-    @Log(title = "行程", businessType = BusinessType.DELETE)
+    @Log(title = "Itinerary", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysTourItineraryService.deleteWithValidByIds(List.of(ids), true));
     }

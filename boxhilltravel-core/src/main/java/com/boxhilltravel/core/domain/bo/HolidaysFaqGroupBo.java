@@ -25,13 +25,13 @@ public class HolidaysFaqGroupBo implements Serializable {
     /**
      * 主键ID
      */
-    @NotNull(message = "主键ID不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.primaryKey.required}", groups = { EditGroup.class })
     private Long id;
 
     /**
      * 分组名称
      */
-    @NotBlank(message = "分组名称不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.groupName.required}", groups = { AddGroup.class, EditGroup.class })
     private String groupName;
 
     /**

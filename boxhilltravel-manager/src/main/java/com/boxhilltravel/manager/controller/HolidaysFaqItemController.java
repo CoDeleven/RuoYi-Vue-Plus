@@ -50,7 +50,7 @@ public class HolidaysFaqItemController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:faq_item:query")
     @GetMapping("/{id}")
-    public R<HolidaysFaqItemVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysFaqItemVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysFaqItemService.queryById(id));
     }
@@ -59,7 +59,7 @@ public class HolidaysFaqItemController extends BaseController {
      * 新增FAQ条目
      */
     @SaCheckPermission("boxhilltravel_manager:faq_item:add")
-    @Log(title = "FAQ条目", businessType = BusinessType.INSERT)
+    @Log(title = "FAQ Item", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysFaqItemBo bo) {
@@ -70,7 +70,7 @@ public class HolidaysFaqItemController extends BaseController {
      * 修改FAQ条目
      */
     @SaCheckPermission("boxhilltravel_manager:faq_item:edit")
-    @Log(title = "FAQ条目", businessType = BusinessType.UPDATE)
+    @Log(title = "FAQ Item", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysFaqItemBo bo) {
@@ -81,7 +81,7 @@ public class HolidaysFaqItemController extends BaseController {
      * 修改FAQ条目状态
      */
     @SaCheckPermission("boxhilltravel_manager:faq_item:edit")
-    @Log(title = "FAQ条目", businessType = BusinessType.UPDATE)
+    @Log(title = "FAQ Item", businessType = BusinessType.UPDATE)
     @PutMapping("/changeStatus")
     public R<Void> changeStatus(@RequestBody HolidaysFaqItemBo bo) {
         return toAjax(holidaysFaqItemService.updateStatus(bo.getId(), bo.getStatus()));
@@ -94,9 +94,9 @@ public class HolidaysFaqItemController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel_manager:faq_item:remove")
-    @Log(title = "FAQ条目", businessType = BusinessType.DELETE)
+    @Log(title = "FAQ Item", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysFaqItemService.deleteWithValidByIds(List.of(ids), true));
     }

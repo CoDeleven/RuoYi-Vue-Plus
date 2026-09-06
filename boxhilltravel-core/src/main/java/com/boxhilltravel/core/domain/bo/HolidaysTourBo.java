@@ -33,19 +33,19 @@ public class HolidaysTourBo implements Serializable {
     /**
      * 线路ID
      */
-    @NotNull(message = "线路ID不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.tourId.required}", groups = { EditGroup.class })
     private Long id;
 
     /**
      * 线路代码(唯一)
      */
-    @NotBlank(message = "线路代码(唯一)不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.tourCode.required}", groups = { AddGroup.class, EditGroup.class })
     private String code;
 
     /**
      * 线路名称
      */
-    @NotBlank(message = "线路名称不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.tourName.required}", groups = { AddGroup.class, EditGroup.class })
     private String name;
 
     /**
@@ -56,31 +56,31 @@ public class HolidaysTourBo implements Serializable {
     /**
      * 行程天数
      */
-    @NotNull(message = "行程天数不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.durationDays.required}", groups = { AddGroup.class, EditGroup.class })
     private Integer durationDays;
 
     /**
      * 旅行风格
      */
-    @NotNull(message = "旅行风格不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.travelStyle.required}", groups = { AddGroup.class, EditGroup.class })
     private Long travelStyle;
 
     /**
      * 服务等级
      */
-    @NotNull(message = "服务等级不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.serviceLevel.required}", groups = { AddGroup.class, EditGroup.class })
     private Long serviceLevel;
 
     /**
      * 线路强度 1-5
      */
-    @NotNull(message = "线路强度 1-5不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.physicalRating.required}", groups = { AddGroup.class, EditGroup.class })
     private Long physicalRating;
 
     /**
      * 线路类型
      */
-    @NotNull(message = "线路类型不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.tripType.required}", groups = { AddGroup.class, EditGroup.class })
     private Long tripType;
 
     /**
@@ -101,20 +101,20 @@ public class HolidaysTourBo implements Serializable {
     /**
      * 基础价格
      */
-    @NotNull(message = "基础价格不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.basePrice.required}", groups = { AddGroup.class, EditGroup.class })
     private BigDecimal basePrice;
 
     /**
      * 销售价格
      */
-    @NotNull(message = "销售价格不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.salePrice.required}", groups = { AddGroup.class, EditGroup.class })
     private BigDecimal salePrice;
 
     /**
      * Single Supplement
      */
-    @DecimalMin(value = "0.00", message = "Single Supplement不能小于0", groups = { AddGroup.class, EditGroup.class })
-    @Digits(integer = 10, fraction = 2, message = "Single Supplement最多保留两位小数", groups = { AddGroup.class, EditGroup.class })
+    @DecimalMin(value = "0.00", message = "{boxhilltravel.validation.singleSupplement.min}", groups = { AddGroup.class, EditGroup.class })
+    @Digits(integer = 10, fraction = 2, message = "{boxhilltravel.validation.singleSupplement.digits}", groups = { AddGroup.class, EditGroup.class })
     private BigDecimal singleSupplement;
 
     /**
@@ -150,7 +150,7 @@ public class HolidaysTourBo implements Serializable {
     /**
      * 状态 0草稿 1上架 2下架
      */
-    @NotNull(message = "状态 0草稿 1上架 2下架不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.status.required}", groups = { AddGroup.class, EditGroup.class })
     private Long status;
 
     /**

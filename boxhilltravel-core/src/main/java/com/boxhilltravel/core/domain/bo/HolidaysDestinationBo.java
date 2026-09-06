@@ -29,13 +29,13 @@ public class HolidaysDestinationBo implements Serializable {
     /**
      * 目的地ID
      */
-    @NotNull(message = "目的地ID不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.destinationId.required}", groups = { EditGroup.class })
     private Long id;
 
     /**
      * 目的地名称
      */
-    @NotBlank(message = "目的地名称不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.destinationName.required}", groups = { AddGroup.class, EditGroup.class })
     private String name;
 
     /**
@@ -51,7 +51,7 @@ public class HolidaysDestinationBo implements Serializable {
     /**
      * 层级：1大洲 2国家 3城市
      */
-    @NotNull(message = "层级：1大洲 2国家 3城市不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.destinationLevel.required}", groups = { AddGroup.class, EditGroup.class })
     private Long level;
 
     /**
@@ -72,7 +72,7 @@ public class HolidaysDestinationBo implements Serializable {
     /**
      * 状态 0禁用 1启用
      */
-    @NotNull(message = "状态 0禁用 1启用不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.status.required}", groups = { AddGroup.class, EditGroup.class })
     private Long status;
 
     /**

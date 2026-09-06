@@ -25,25 +25,25 @@ public class HolidaysTourItineraryBo implements Serializable {
     /**
      * 
      */
-    @NotNull(message = "不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.primaryKey.required}", groups = { EditGroup.class })
     private Long id;
 
     /**
      * 线路ID
      */
-    @NotNull(message = "线路ID不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.tourId.required}", groups = { AddGroup.class, EditGroup.class })
     private Long tourId;
 
     /**
      * 第几天
      */
-    @NotNull(message = "第几天不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.dayNumber.required}", groups = { AddGroup.class, EditGroup.class })
     private Integer dayNumber;
 
     /**
      * 标题
      */
-    @NotBlank(message = "标题不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.title.required}", groups = { AddGroup.class, EditGroup.class })
     private String title;
 
     /**
