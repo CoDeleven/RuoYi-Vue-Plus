@@ -12,8 +12,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * 线路图片迁移服务。
@@ -21,13 +25,12 @@ import java.util.List;
 @Service
 public class TourImageMigrationService {
 
-    private static final String TABLE_NAME = "holidays_tour";
-    private static final String SELECT_SQL = """
-        select id, cover_image, map_image
-        from holidays_tour
-        where deleted_at is null
-          and (cover_image is not null or map_image is not null)
-        """;
+    private static final String TARGET_TOUR = "tour";
+    private static final String TARGET_DESTINATION = "destination";
+    private static final MigrationTarget TOUR_TARGET = new MigrationTarget(
+        TARGET_TOUR, "holidays_tour", List.of("cover_image", "map_image"));
+    private static final MigrationTarget DESTINATION_TARGET = new MigrationTarget(
+        TARGET_DESTINATION, "holidays_destination", List.of("image"));
 
     private final NamedParameterJdbcTemplate namedJdbcTemplate;
     private final JdbcTemplate jdbcTemplate;
@@ -41,19 +44,21 @@ public class TourImageMigrationService {
     }
 
     public MigrationSummary migrate(TourImageMigrationOptions options) {
-        List<TourRow> rows = loadRows(options);
+        MigrationTarget target = resolveTarget(options);
+        List<MigrationRow> rows = loadRows(options, target);
         Path reportFile = options.getReportFile();
         createReportParent(reportFile);
 
         MigrationSummary summary = new MigrationSummary(reportFile);
         try (java.io.BufferedWriter writer = Files.newBufferedWriter(reportFile, StandardCharsets.UTF_8)) {
-            writer.write("tour_id,column,source_ref,source_kind,source_name,source_url,old_oss_id,new_oss_id,new_url,action,result,detail");
+            writer.write("record_id,target,column,source_ref,source_kind,source_name,source_url,old_oss_id,new_oss_id,new_url,action,result,detail");
             writer.newLine();
-            for (TourRow row : rows) {
+            for (MigrationRow row : rows) {
                 summary.totalRows++;
                 boolean rowChanged = false;
-                rowChanged |= processColumn(row.id, "cover_image", row.coverImage, options, writer, summary, row);
-                rowChanged |= processColumn(row.id, "map_image", row.mapImage, options, writer, summary, row);
+                for (Map.Entry<String, String> column : row.imageValues.entrySet()) {
+                    rowChanged |= processColumn(target, row.id, column.getKey(), column.getValue(), options, writer, summary);
+                }
                 if (rowChanged) {
                     summary.updatedRows++;
                 }
@@ -64,38 +69,76 @@ public class TourImageMigrationService {
         return summary;
     }
 
-    private List<TourRow> loadRows(TourImageMigrationOptions options) {
-        StringBuilder sql = new StringBuilder(SELECT_SQL);
+    private List<MigrationRow> loadRows(TourImageMigrationOptions options, MigrationTarget target) {
+        StringBuilder sql = new StringBuilder(target.selectSql());
         MapSqlParameterSource params = new MapSqlParameterSource();
-        if (options.getTourIds() != null && !options.getTourIds().isEmpty()) {
-            sql.append(" and id in (:tourIds)");
-            params.addValue("tourIds", options.getTourIds());
+        List<Long> ids = resolveIds(options, target);
+        if (!ids.isEmpty()) {
+            sql.append(" and id in (:ids)");
+            params.addValue("ids", ids);
         }
         sql.append(" order by id");
         if (options.getLimit() != null) {
             sql.append(" limit ").append(options.getLimit());
         }
-        List<TourRow> rows = namedJdbcTemplate.query(sql.toString(), params, (rs, rowNum) ->
-            new TourRow(rs.getLong("id"), rs.getString("cover_image"), rs.getString("map_image")));
+        List<MigrationRow> rows = namedJdbcTemplate.query(sql.toString(), params, (rs, rowNum) -> {
+            Map<String, String> imageValues = new LinkedHashMap<>();
+            for (String column : target.imageColumns) {
+                imageValues.put(column, rs.getString(column));
+            }
+            return new MigrationRow(rs.getLong("id"), imageValues);
+        });
         if (rows == null) {
             return Collections.emptyList();
         }
         return rows;
     }
 
-    private boolean processColumn(Long tourId, String columnName, String rawValue, TourImageMigrationOptions options,
-                                  java.io.BufferedWriter writer, MigrationSummary summary, TourRow row) throws IOException {
+    private MigrationTarget resolveTarget(TourImageMigrationOptions options) {
+        String target = options.getTarget();
+        if (target == null || target.trim().isEmpty()) {
+            return TOUR_TARGET;
+        }
+        return switch (target.trim().toLowerCase(Locale.ROOT)) {
+            case TARGET_TOUR -> TOUR_TARGET;
+            case TARGET_DESTINATION -> DESTINATION_TARGET;
+            default -> throw new ServiceException("Unsupported image migration target: " + target);
+        };
+    }
+
+    private List<Long> resolveIds(TourImageMigrationOptions options, MigrationTarget target) {
+        if (options.getIds() != null && !options.getIds().isEmpty()) {
+            return options.getIds();
+        }
+        if (!TARGET_TOUR.equals(target.name)) {
+            return Collections.emptyList();
+        }
+        List<Long> ids = new ArrayList<>();
+        if (options.getTourIds() != null && !options.getTourIds().isEmpty()) {
+            ids.addAll(options.getTourIds());
+        }
+        if (options.getTourId() != null && !ids.contains(options.getTourId())) {
+            ids.add(options.getTourId());
+        }
+        return ids;
+    }
+
+    private boolean processColumn(MigrationTarget target, Long recordId, String columnName, String rawValue,
+                                  TourImageMigrationOptions options, java.io.BufferedWriter writer,
+                                  MigrationSummary summary) throws IOException {
         if (rawValue == null || rawValue.trim().isEmpty()) {
             summary.skippedFields++;
-            writeReport(writer, tourId, columnName, rawValue, "EMPTY", null, null, null, null, null, "SKIP", "EMPTY", "blank value");
+            writeReport(writer, recordId, target.name, columnName, rawValue, "EMPTY", null, null, null, null, null,
+                "SKIP", "EMPTY", "blank value");
             return false;
         }
 
         ImageSource source = resolveSource(rawValue);
         if (source == null) {
             summary.failedFields++;
-            writeReport(writer, tourId, columnName, rawValue, "UNKNOWN", null, null, null, null, null, "SKIP", "ERROR", "unable to resolve source");
-            if (options.getFailFast()) {
+            writeReport(writer, recordId, target.name, columnName, rawValue, "UNKNOWN", null, null, null, null, null,
+                "SKIP", "ERROR", "unable to resolve source");
+            if (isFailFast(options)) {
                 throw new ServiceException("Unable to resolve image source: " + rawValue);
             }
             return false;
@@ -103,8 +146,8 @@ public class TourImageMigrationService {
 
         if (source.skipBeforeDownload()) {
             summary.skippedFields++;
-            writeReport(writer, tourId, columnName, rawValue, source.kind, source.sourceName, source.sourceUrl,
-                source.oldOssId, null, null, "SKIP", "NOT_PNG", "extension indicates non-png");
+            writeReport(writer, recordId, target.name, columnName, rawValue, source.kind, source.sourceName,
+                source.sourceUrl, source.oldOssId, null, null, "SKIP", "NOT_PNG", "extension indicates non-png");
             return false;
         }
 
@@ -113,9 +156,9 @@ public class TourImageMigrationService {
             sourceBytes = source.downloadBytes();
         } catch (IOException ex) {
             summary.failedFields++;
-            writeReport(writer, tourId, columnName, rawValue, source.kind, source.sourceName, source.sourceUrl,
-                source.oldOssId, null, null, "FAIL", "DOWNLOAD_ERROR", ex.getMessage());
-            if (options.getFailFast()) {
+            writeReport(writer, recordId, target.name, columnName, rawValue, source.kind, source.sourceName,
+                source.sourceUrl, source.oldOssId, null, null, "FAIL", "DOWNLOAD_ERROR", ex.getMessage());
+            if (isFailFast(options)) {
                 throw new ServiceException("Download failed for " + rawValue, ex);
             }
             return false;
@@ -123,49 +166,64 @@ public class TourImageMigrationService {
 
         if (!TourImageMigrationSupport.isPng(sourceBytes)) {
             summary.skippedFields++;
-            writeReport(writer, tourId, columnName, rawValue, source.kind, source.sourceName, source.sourceUrl,
-                source.oldOssId, null, null, "SKIP", "NOT_PNG", "binary signature is not png");
+            writeReport(writer, recordId, target.name, columnName, rawValue, source.kind, source.sourceName,
+                source.sourceUrl, source.oldOssId, null, null, "SKIP", "NOT_PNG", "binary signature is not png");
             return false;
         }
 
         byte[] jpegBytes;
         try {
-            jpegBytes = TourImageMigrationSupport.convertPngToJpeg(sourceBytes, options.getQuality());
+            jpegBytes = TourImageMigrationSupport.convertPngToJpeg(sourceBytes, quality(options));
         } catch (IOException ex) {
             summary.failedFields++;
-            writeReport(writer, tourId, columnName, rawValue, source.kind, source.sourceName, source.sourceUrl,
-                source.oldOssId, null, null, "FAIL", "CONVERT_ERROR", ex.getMessage());
-            if (options.getFailFast()) {
+            writeReport(writer, recordId, target.name, columnName, rawValue, source.kind, source.sourceName,
+                source.sourceUrl, source.oldOssId, null, null, "FAIL", "CONVERT_ERROR", ex.getMessage());
+            if (isFailFast(options)) {
                 throw new ServiceException("Convert failed for " + rawValue, ex);
             }
             return false;
         }
 
-        if (options.getDryRun()) {
+        if (isDryRun(options)) {
             summary.convertedFields++;
-            writeReport(writer, tourId, columnName, rawValue, source.kind, source.sourceName, source.sourceUrl,
-                source.oldOssId, null, null, "DRY_RUN", "READY", "would upload " + jpegBytes.length + " bytes");
+            writeReport(writer, recordId, target.name, columnName, rawValue, source.kind, source.sourceName,
+                source.sourceUrl, source.oldOssId, null, null, "DRY_RUN", "READY",
+                "would upload " + jpegBytes.length + " bytes");
             return true;
         }
 
-        String jpgName = TourImageMigrationSupport.asJpegName(source.sourceName, tourId, columnName);
+        String jpgName = TourImageMigrationSupport.asJpegName(source.sourceName, recordId, columnName);
         InMemoryMultipartFile file = new InMemoryMultipartFile("file", jpgName, "image/jpeg", jpegBytes);
-        SysOssExt ext = buildExt(rawValue, tourId, columnName, source, jpegBytes.length);
+        SysOssExt ext = buildExt(target, rawValue, recordId, columnName, source, jpegBytes.length);
         SysOssVo uploaded = sysOssService.upload(file, ext);
         if (uploaded == null || uploaded.getOssId() == null) {
             throw new ServiceException("Upload failed for " + rawValue);
         }
         String newRef = String.valueOf(uploaded.getOssId());
-        updateTourColumn(tourId, columnName, newRef);
+        updateColumn(target, recordId, columnName, newRef);
         summary.convertedFields++;
-        writeReport(writer, tourId, columnName, rawValue, source.kind, source.sourceName, source.sourceUrl,
-            source.oldOssId, uploaded.getOssId(), uploaded.getUrl(), "UPDATE", "OK", "uploaded and referenced by ossId");
+        writeReport(writer, recordId, target.name, columnName, rawValue, source.kind, source.sourceName,
+            source.sourceUrl, source.oldOssId, uploaded.getOssId(), uploaded.getUrl(), "UPDATE", "OK",
+            "uploaded and referenced by ossId");
         return true;
     }
 
-    private void updateTourColumn(Long tourId, String columnName, String newRef) {
-        String sql = "update " + TABLE_NAME + " set " + columnName + " = ?, update_time = now() where id = ?";
-        jdbcTemplate.update(sql, newRef, tourId);
+    private boolean isDryRun(TourImageMigrationOptions options) {
+        return Boolean.TRUE.equals(options.getDryRun());
+    }
+
+    private boolean isFailFast(TourImageMigrationOptions options) {
+        return Boolean.TRUE.equals(options.getFailFast());
+    }
+
+    private float quality(TourImageMigrationOptions options) {
+        return options.getQuality() == null ? 0.85f : options.getQuality();
+    }
+
+    private void updateColumn(MigrationTarget target, Long recordId, String columnName, String newRef) {
+        target.validateColumn(columnName);
+        String sql = "update " + target.tableName + " set " + columnName + " = ?, update_time = now() where id = ?";
+        jdbcTemplate.update(sql, newRef, recordId);
     }
 
     private ImageSource resolveSource(String rawValue) {
@@ -212,12 +270,13 @@ public class TourImageMigrationService {
         }
     }
 
-    private SysOssExt buildExt(String rawValue, Long tourId, String columnName, ImageSource source, long fileSize) {
+    private SysOssExt buildExt(MigrationTarget target, String rawValue, Long recordId, String columnName,
+                               ImageSource source, long fileSize) {
         SysOssExt ext = new SysOssExt();
-        ext.setBizType("tour-image-migration");
+        ext.setBizType("image-migration");
         ext.setSource("systemImport");
-        ext.setRefType(TABLE_NAME + "." + columnName);
-        ext.setRefId(String.valueOf(tourId));
+        ext.setRefType(target.tableName + "." + columnName);
+        ext.setRefId(String.valueOf(recordId));
         ext.setRemark("migrated from " + source.kind + ":" + rawValue);
         ext.setFileSize(fileSize);
         ext.setContentType("image/jpeg");
@@ -235,10 +294,13 @@ public class TourImageMigrationService {
         }
     }
 
-    private void writeReport(java.io.BufferedWriter writer, Long tourId, String columnName, String sourceRef,
-                             String sourceKind, String sourceName, String sourceUrl, Long oldOssId, Long newOssId,
-                             String newUrl, String action, String result, String detail) throws IOException {
-        writer.write(csv(tourId));
+    private void writeReport(java.io.BufferedWriter writer, Long recordId, String target, String columnName,
+                             String sourceRef, String sourceKind, String sourceName, String sourceUrl, Long oldOssId,
+                             Long newOssId, String newUrl, String action, String result, String detail)
+        throws IOException {
+        writer.write(csv(recordId));
+        writer.write(',');
+        writer.write(csv(target));
         writer.write(',');
         writer.write(csv(columnName));
         writer.write(',');
@@ -276,15 +338,39 @@ public class TourImageMigrationService {
         return '"' + text.replace("\"", "\"\"") + '"';
     }
 
-    private static final class TourRow {
+    private static final class MigrationRow {
         private final Long id;
-        private final String coverImage;
-        private final String mapImage;
+        private final Map<String, String> imageValues;
 
-        private TourRow(Long id, String coverImage, String mapImage) {
+        private MigrationRow(Long id, Map<String, String> imageValues) {
             this.id = id;
-            this.coverImage = coverImage;
-            this.mapImage = mapImage;
+            this.imageValues = imageValues;
+        }
+    }
+
+    private static final class MigrationTarget {
+        private final String name;
+        private final String tableName;
+        private final List<String> imageColumns;
+
+        private MigrationTarget(String name, String tableName, List<String> imageColumns) {
+            this.name = name;
+            this.tableName = tableName;
+            this.imageColumns = imageColumns;
+        }
+
+        private String selectSql() {
+            return "select id, " + String.join(", ", imageColumns)
+                + " from " + tableName
+                + " where deleted_at is null and ("
+                + String.join(" is not null or ", imageColumns)
+                + " is not null)";
+        }
+
+        private void validateColumn(String columnName) {
+            if (!imageColumns.contains(columnName)) {
+                throw new ServiceException("Unsupported image migration column: " + tableName + "." + columnName);
+            }
         }
     }
 
