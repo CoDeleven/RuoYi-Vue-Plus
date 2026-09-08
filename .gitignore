@@ -57,3 +57,4 @@ application-ga.yml
 *.keystore
 *.p12
 *.pfx
+.env

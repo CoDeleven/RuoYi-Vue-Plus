@@ -1,24 +1,33 @@
 package com.boxhilltravel.manager.controller;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 import com.boxhilltravel.core.domain.bo.HolidaysTourBo;
 import com.boxhilltravel.core.domain.vo.HolidaysTourVo;
+import com.boxhilltravel.manager.domain.dto.TourImportRowResult;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.constraints.*;
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.hutool.core.io.resource.ClassPathResource;
+import org.dromara.common.core.utils.file.FileUtils;
 import org.dromara.common.log.annotation.Log;
 import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.web.core.BaseController;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.multipart.MultipartFile;
 import org.dromara.common.redis.annotation.RepeatSubmit;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.core.validate.AddGroup;
 import org.dromara.common.core.validate.EditGroup;
+import com.boxhilltravel.manager.service.IHolidaysTourImportService;
 import com.boxhilltravel.manager.service.IHolidaysTourService;
 import org.dromara.common.core.domain.PageResult;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 线路管理
@@ -33,6 +42,7 @@ import org.dromara.common.core.domain.PageResult;
 public class HolidaysTourController extends BaseController {
 
     private final IHolidaysTourService holidaysTourService;
+    private final IHolidaysTourImportService holidaysTourImportService;
 
     /**
      * 查询线路管理列表
@@ -99,6 +109,42 @@ public class HolidaysTourController extends BaseController {
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysTourService.deleteWithValidByIds(List.of(ids), true));
+    }
+
+    /**
+     * 批量导入线路（Tours / Destinations / Itinerary / ServiceItems / Departures 多工作表模板）
+     */
+    @SaCheckPermission("boxhilltravel_manager:tour:add")
+    @Log(title = "线路管理导入", businessType = BusinessType.IMPORT)
+    @PostMapping(value = "/importData", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public R<Void> importData(@RequestPart("file") MultipartFile file) {
+        List<TourImportRowResult> results = holidaysTourImportService.importTours(file);
+        long successCount = results.stream().filter(TourImportRowResult::isSuccess).count();
+        long failCount = results.size() - successCount;
+        StringBuilder sb = new StringBuilder();
+        sb.append("共 ").append(results.size()).append(" 个线路，成功 ").append(successCount)
+            .append(" 个，失败 ").append(failCount).append(" 个");
+        if (failCount > 0) {
+            sb.append("<br/>");
+            results.stream()
+                .filter(r -> !r.isSuccess())
+                .forEach(r -> sb.append("第").append(r.getRowNumber()).append("行(")
+                    .append(r.getTourCode()).append(")：").append(r.getMessage()).append("<br/>"));
+        }
+        return failCount == 0 ? R.ok(sb.toString()) : R.fail(sb.toString());
+    }
+
+    /**
+     * 下载线路批量导入模板
+     */
+    @PostMapping("/importTemplate")
+    public void importTemplate(HttpServletResponse response) throws IOException {
+        ClassPathResource resource = new ClassPathResource("import-templates/tours_import_template.xlsx");
+        FileUtils.setAttachmentResponseHeader(response, "tours_import_template.xlsx");
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8");
+        try (InputStream is = resource.getStream()) {
+            is.transferTo(response.getOutputStream());
+        }
     }
 }
 
