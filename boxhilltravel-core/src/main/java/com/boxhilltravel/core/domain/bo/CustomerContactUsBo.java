@@ -34,12 +34,8 @@ public class CustomerContactUsBo implements Serializable {
     @Size(max = 100, message = "Email address cannot exceed 100 characters", groups = { AddGroup.class })
     private String emailAddress;
 
-    @NotBlank(message = "Phone number is required", groups = { AddGroup.class })
-    @Size(max = 30, message = "Phone number cannot exceed 30 characters", groups = { AddGroup.class })
     private String phoneNumber;
 
-    @NotBlank(message = "Enquiry type is required", groups = { AddGroup.class })
-    @Size(max = 50, message = "Enquiry type cannot exceed 50 characters", groups = { AddGroup.class })
     private String enquiryType;
 
     @NotBlank(message = "Message is required", groups = { AddGroup.class })
