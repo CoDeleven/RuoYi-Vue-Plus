@@ -2,11 +2,16 @@ package com.boxhilltravel.manager.controller;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.List;
 
 import com.boxhilltravel.core.domain.bo.HolidaysTourBo;
 import com.boxhilltravel.core.domain.vo.HolidaysTourVo;
 import com.boxhilltravel.manager.domain.dto.TourImportRowResult;
+import com.boxhilltravel.manager.tool.tourimage.MigrationSummary;
+import com.boxhilltravel.manager.tool.tourimage.TourImageMigrationOptions;
+import com.boxhilltravel.manager.tool.tourimage.TourImageMigrationService;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.constraints.*;
 import cn.dev33.satoken.annotation.SaCheckPermission;
@@ -123,13 +128,13 @@ public class HolidaysTourController extends BaseController {
         long failCount = results.size() - successCount;
         StringBuilder sb = new StringBuilder();
         sb.append("共 ").append(results.size()).append(" 个线路，成功 ").append(successCount)
-            .append(" 个，失败 ").append(failCount).append(" 个");
+          .append(" 个，失败 ").append(failCount).append(" 个");
         if (failCount > 0) {
             sb.append("<br/>");
             results.stream()
-                .filter(r -> !r.isSuccess())
-                .forEach(r -> sb.append("第").append(r.getRowNumber()).append("行(")
-                    .append(r.getTourCode()).append(")：").append(r.getMessage()).append("<br/>"));
+                   .filter(r -> !r.isSuccess())
+                   .forEach(r -> sb.append("第").append(r.getRowNumber()).append("行(")
+                                   .append(r.getTourCode()).append(")：").append(r.getMessage()).append("<br/>"));
         }
         return failCount == 0 ? R.ok(sb.toString()) : R.fail(sb.toString());
     }
@@ -145,6 +150,9 @@ public class HolidaysTourController extends BaseController {
         try (InputStream is = resource.getStream()) {
             is.transferTo(response.getOutputStream());
         }
+    }
+
+
     @Resource
     private TourImageMigrationService migrationService;
 
