@@ -41,7 +41,7 @@ public class CustomerUserController extends BaseController {
 
     @SaCheckPermission("boxhilltravel_manager:customer_user:query")
     @GetMapping("/{userId}")
-    public R<CustomerUserDetailVo> getInfo(@NotNull(message = "Customer user id is required") @PathVariable Long userId) {
+    public R<CustomerUserDetailVo> getInfo(@NotNull(message = "{boxhilltravel.validation.customerUserId.required}") @PathVariable Long userId) {
         return R.ok(customerUserManageService.queryById(userId));
     }
 

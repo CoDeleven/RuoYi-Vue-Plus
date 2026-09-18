@@ -10,6 +10,7 @@ import com.boxhilltravel.core.mapper.HolidaysFaqGroupMapper;
 import com.boxhilltravel.core.mapper.HolidaysFaqItemMapper;
 import com.boxhilltravel.manager.service.IHolidaysFaqGroupService;
 import org.dromara.common.core.exception.ServiceException;
+import org.dromara.common.core.utils.MessageUtils;
 import org.dromara.common.core.utils.MapstructUtils;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -173,7 +174,7 @@ public class HolidaysFaqGroupServiceImpl implements IHolidaysFaqGroupService {
                 .in(HolidaysFaqItem::getGroupId, ids)
                 .count();
             if (itemCount > 0) {
-                throw new ServiceException("FAQ分组下存在条目，不能删除");
+                throw new ServiceException(MessageUtils.message("boxhilltravel.error.faqGroup.hasItems"));
             }
         }
         return holidaysFaqGroupMapper.deleteByIds(ids) > 0;

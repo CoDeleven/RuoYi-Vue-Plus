@@ -28,43 +28,43 @@ public class HolidaysDepartureBo implements Serializable {
     /**
      *
      */
-    @NotNull(message = "不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.primaryKey.required}", groups = { EditGroup.class })
     private Long id;
 
     /**
      * 线路ID
      */
-    @NotNull(message = "线路ID不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.tourId.required}", groups = { AddGroup.class, EditGroup.class })
     private Long tourId;
 
     /**
      * 出发日期
      */
-    @NotNull(message = "出发日期不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.departureDate.required}", groups = { AddGroup.class, EditGroup.class })
     private LocalDateTime departureDate;
 
     /**
      * 返程日期
      */
-    @NotNull(message = "返程日期不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.returnDate.required}", groups = { AddGroup.class, EditGroup.class })
     private LocalDateTime returnDate;
 
     /**
      * 行程天数
      */
-    @NotNull(message = "行程天数不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.durationDays.required}", groups = { AddGroup.class, EditGroup.class })
     private Integer durationDays;
 
     /**
      * 团期类型 1固定 2不固定
      */
-    @NotNull(message = "团期类型 1固定 2不固定不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.departureType.required}", groups = { AddGroup.class, EditGroup.class })
     private Long departureType;
 
     /**
      * 核载人数
      */
-    @NotNull(message = "核载人数不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.capacity.required}", groups = { AddGroup.class, EditGroup.class })
     private Integer maxCapacity;
 
     /**
@@ -85,13 +85,13 @@ public class HolidaysDepartureBo implements Serializable {
     /**
      * 原价
      */
-    @NotNull(message = "原价不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.originalPrice.required}", groups = { AddGroup.class, EditGroup.class })
     private BigDecimal basePrice;
 
     /**
      * 售价
      */
-    @NotNull(message = "售价不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.salePrice.required}", groups = { AddGroup.class, EditGroup.class })
     private BigDecimal salePrice;
 
     /**
@@ -102,7 +102,7 @@ public class HolidaysDepartureBo implements Serializable {
     /**
      * 状态 1可预订 2已满 3已结束 4已取消
      */
-    @NotNull(message = "状态 1可预订 2已满 3已结束 4已取消不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.status.required}", groups = { AddGroup.class, EditGroup.class })
     private Long status;
 
     /**

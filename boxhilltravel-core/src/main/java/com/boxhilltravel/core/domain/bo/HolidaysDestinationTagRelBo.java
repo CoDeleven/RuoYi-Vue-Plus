@@ -21,16 +21,16 @@ public class HolidaysDestinationTagRelBo implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @NotNull(message = "主键ID不能为空", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.primaryKey.required}", groups = { EditGroup.class })
     private Long id;
 
-    @NotNull(message = "目的地不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.destination.required}", groups = { AddGroup.class, EditGroup.class })
     private Long destinationId;
 
-    @NotBlank(message = "标签不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "{boxhilltravel.validation.tag.required}", groups = { AddGroup.class, EditGroup.class })
     private String dictValue;
 
-    @NotNull(message = "排序不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.sort.required}", groups = { AddGroup.class, EditGroup.class })
     private Integer sortOrder;
 
     /**

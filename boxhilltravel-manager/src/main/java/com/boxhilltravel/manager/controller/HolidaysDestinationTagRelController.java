@@ -53,7 +53,7 @@ public class HolidaysDestinationTagRelController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:destination_tag:query")
     @GetMapping("/{id}")
-    public R<HolidaysDestinationTagRelVo> getInfo(@NotNull(message = "主键不能为空") @PathVariable Long id) {
+    public R<HolidaysDestinationTagRelVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}") @PathVariable Long id) {
         return R.ok(destinationTagRelService.queryById(id));
     }
 
@@ -95,7 +95,7 @@ public class HolidaysDestinationTagRelController extends BaseController {
     @SaCheckPermission("boxhilltravel_manager:destination_tag:remove")
     @Log(title = "Destination Tag", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}") @PathVariable Long[] ids) {
         return toAjax(destinationTagRelService.deleteWithValidByIds(List.of(ids), true));
     }
 }

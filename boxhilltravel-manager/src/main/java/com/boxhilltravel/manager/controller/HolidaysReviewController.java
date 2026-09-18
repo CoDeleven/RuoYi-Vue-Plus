@@ -48,7 +48,7 @@ public class HolidaysReviewController extends BaseController {
 
     @SaCheckPermission("boxhilltravel_manager:review:query")
     @GetMapping("/{id}")
-    public R<HolidaysReviewVo> getInfo(@NotNull(message = "Review id is required") @PathVariable Long id) {
+    public R<HolidaysReviewVo> getInfo(@NotNull(message = "{boxhilltravel.validation.reviewId.required}") @PathVariable Long id) {
         return R.ok(holidaysReviewService.queryById(id));
     }
 
@@ -85,16 +85,16 @@ public class HolidaysReviewController extends BaseController {
     @SaCheckPermission("boxhilltravel_manager:review:remove")
     @Log(title = "Review", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "Review ids are required") @PathVariable Long[] ids) {
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.reviewIds.required}") @PathVariable Long[] ids) {
         return toAjax(holidaysReviewService.deleteWithValidByIds(List.of(ids), true));
     }
 
     @Data
     public static class ReviewAuditBo {
-        @NotNull(message = "Review id is required")
+        @NotNull(message = "{boxhilltravel.validation.reviewId.required}")
         private Long id;
 
-        @NotNull(message = "Audit status is required")
+        @NotNull(message = "{boxhilltravel.validation.auditStatus.required}")
         private Integer status;
 
         private String rejectReason;
@@ -102,10 +102,10 @@ public class HolidaysReviewController extends BaseController {
 
     @Data
     public static class ReviewFeaturedBo {
-        @NotNull(message = "Review id is required")
+        @NotNull(message = "{boxhilltravel.validation.reviewId.required}")
         private Long id;
 
-        @NotNull(message = "Featured status is required")
+        @NotNull(message = "{boxhilltravel.validation.featuredStatus.required}")
         private Integer featured;
     }
 

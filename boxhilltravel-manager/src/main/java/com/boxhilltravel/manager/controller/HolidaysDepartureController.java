@@ -54,7 +54,7 @@ public class HolidaysDepartureController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:departure:query")
     @GetMapping("/{id}")
-    public R<HolidaysDepartureVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysDepartureVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysDepartureService.queryById(id));
     }
@@ -63,7 +63,7 @@ public class HolidaysDepartureController extends BaseController {
      * 新增团期
      */
     @SaCheckPermission("boxhilltravel_manager:departure:add")
-    @Log(title = "团期", businessType = BusinessType.INSERT)
+    @Log(title = "Departure", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysDepartureBo bo) {
@@ -74,7 +74,7 @@ public class HolidaysDepartureController extends BaseController {
      * 修改团期
      */
     @SaCheckPermission("boxhilltravel_manager:departure:edit")
-    @Log(title = "团期", businessType = BusinessType.UPDATE)
+    @Log(title = "Departure", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysDepartureBo bo) {
@@ -89,9 +89,9 @@ public class HolidaysDepartureController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel_manager:departure:remove")
-    @Log(title = "团期", businessType = BusinessType.DELETE)
+    @Log(title = "Departure", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysDepartureService.deleteWithValidByIds(List.of(ids), true));
     }

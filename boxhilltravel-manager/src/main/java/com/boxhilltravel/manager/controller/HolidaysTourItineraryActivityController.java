@@ -54,7 +54,7 @@ public class HolidaysTourItineraryActivityController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:tour_itinerary_activity:query")
     @GetMapping("/{id}")
-    public R<HolidaysTourItineraryActivityVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysTourItineraryActivityVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysTourItineraryActivityService.queryById(id));
     }
@@ -63,7 +63,7 @@ public class HolidaysTourItineraryActivityController extends BaseController {
      * 新增行程活动
      */
     @SaCheckPermission("boxhilltravel_manager:tour_itinerary_activity:add")
-    @Log(title = "行程活动", businessType = BusinessType.INSERT)
+    @Log(title = "Itinerary Activity", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysTourItineraryActivityBo bo) {
@@ -74,7 +74,7 @@ public class HolidaysTourItineraryActivityController extends BaseController {
      * 修改行程活动
      */
     @SaCheckPermission("boxhilltravel_manager:tour_itinerary_activity:edit")
-    @Log(title = "行程活动", businessType = BusinessType.UPDATE)
+    @Log(title = "Itinerary Activity", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysTourItineraryActivityBo bo) {
@@ -89,9 +89,9 @@ public class HolidaysTourItineraryActivityController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel_manager:tour_itinerary_activity:remove")
-    @Log(title = "行程活动", businessType = BusinessType.DELETE)
+    @Log(title = "Itinerary Activity", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysTourItineraryActivityService.deleteWithValidByIds(List.of(ids), true));
     }

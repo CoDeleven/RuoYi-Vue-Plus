@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.exception.ServiceException;
+import org.dromara.common.core.utils.MessageUtils;
 import org.dromara.common.core.utils.MapstructUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.query.QueryBuilder;
@@ -95,14 +96,14 @@ public class HolidaysDestinationTagRelServiceImpl implements IHolidaysDestinatio
     private void validEntityBeforeSave(HolidaysDestinationTagRel entity) {
         HolidaysDestination destination = destinationMapper.selectById(entity.getDestinationId());
         if (destination == null || destination.getDeletedAt() != null) {
-            throw new ServiceException("目的地不存在");
+            throw new ServiceException(MessageUtils.message("boxhilltravel.error.destination.notFound"));
         }
         Long dictCount = dictDataMapper.lambda()
             .eq(SysDictData::getDictValue, entity.getDictValue())
             .eq(SysDictData::getDictType, DESTINATION_TAG_DICT_TYPE)
             .count();
         if (dictCount == null || dictCount == 0) {
-            throw new ServiceException("Destination Tag不存在");
+            throw new ServiceException(MessageUtils.message("boxhilltravel.error.destinationTag.notFound"));
         }
         Long existsCount = destinationTagRelMapper.selectCount(QueryBuilder.lambda(HolidaysDestinationTagRel.class)
             .eq(HolidaysDestinationTagRel::getDestinationId, entity.getDestinationId())
@@ -110,7 +111,7 @@ public class HolidaysDestinationTagRelServiceImpl implements IHolidaysDestinatio
             .ne(entity.getId() != null, HolidaysDestinationTagRel::getId, entity.getId())
             .build());
         if (existsCount != null && existsCount > 0) {
-            throw new ServiceException("该目的地已添加此标签");
+            throw new ServiceException(MessageUtils.message("boxhilltravel.error.destinationTag.duplicate"));
         }
     }
 

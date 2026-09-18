@@ -24,10 +24,10 @@ public class HolidaysDestinationPageContentBo implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @NotNull(message = "id is required", groups = { EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.id.required}", groups = { EditGroup.class })
     private Long id;
 
-    @NotNull(message = "destination is required", groups = { AddGroup.class, EditGroup.class })
+    @NotNull(message = "{boxhilltravel.validation.destination.required}", groups = { AddGroup.class, EditGroup.class })
     private Long destinationId;
 
     private String currencyDictValue;

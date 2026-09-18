@@ -60,7 +60,7 @@ public class HolidaysTourController extends BaseController {
      */
     @SaCheckPermission("boxhilltravel_manager:tour:query")
     @GetMapping("/{id}")
-    public R<HolidaysTourVo> getInfo(@NotNull(message = "主键不能为空")
+    public R<HolidaysTourVo> getInfo(@NotNull(message = "{boxhilltravel.validation.primaryKey.required}")
                                      @PathVariable Long id) {
         return R.ok(holidaysTourService.queryById(id));
     }
@@ -69,7 +69,7 @@ public class HolidaysTourController extends BaseController {
      * 新增线路管理
      */
     @SaCheckPermission("boxhilltravel_manager:tour:add")
-    @Log(title = "线路管理", businessType = BusinessType.INSERT)
+    @Log(title = "Tour", businessType = BusinessType.INSERT)
     @RepeatSubmit()
     @PostMapping()
     public R<Void> add(@Validated(AddGroup.class) @RequestBody HolidaysTourBo bo) {
@@ -80,7 +80,7 @@ public class HolidaysTourController extends BaseController {
      * 修改线路管理
      */
     @SaCheckPermission("boxhilltravel_manager:tour:edit")
-    @Log(title = "线路管理", businessType = BusinessType.UPDATE)
+    @Log(title = "Tour", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody HolidaysTourBo bo) {
@@ -91,7 +91,7 @@ public class HolidaysTourController extends BaseController {
      * 修改线路管理状态
      */
     @SaCheckPermission("boxhilltravel_manager:tour:edit")
-    @Log(title = "线路管理", businessType = BusinessType.UPDATE)
+    @Log(title = "Tour", businessType = BusinessType.UPDATE)
     @PutMapping("/changeStatus")
     public R<Void> changeStatus(@RequestBody HolidaysTourBo bo) {
         return toAjax(holidaysTourService.updateStatus(bo.getId(), bo.getStatus()));
@@ -104,9 +104,9 @@ public class HolidaysTourController extends BaseController {
      * @param ids 主键串
      */
     @SaCheckPermission("boxhilltravel_manager:tour:remove")
-    @Log(title = "线路管理", businessType = BusinessType.DELETE)
+    @Log(title = "Tour", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+    public R<Void> remove(@NotEmpty(message = "{boxhilltravel.validation.primaryKey.required}")
                           @PathVariable Long[] ids) {
         return toAjax(holidaysTourService.deleteWithValidByIds(List.of(ids), true));
     }
@@ -145,6 +145,14 @@ public class HolidaysTourController extends BaseController {
         try (InputStream is = resource.getStream()) {
             is.transferTo(response.getOutputStream());
         }
+    @Resource
+    private TourImageMigrationService migrationService;
+
+    @PostMapping("/migrate")
+    public R<MigrationSummary> migrate(@RequestBody TourImageMigrationOptions options) {
+        options.setReportFile(Paths.get("script", "logs", "tour-image-migration-" + System.currentTimeMillis() + ".csv"));
+        MigrationSummary summary = migrationService.migrate(options);
+        return R.ok(summary);
     }
 }
 
