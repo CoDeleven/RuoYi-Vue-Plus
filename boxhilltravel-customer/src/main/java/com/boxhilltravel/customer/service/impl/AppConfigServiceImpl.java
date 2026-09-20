@@ -6,6 +6,7 @@ import com.boxhilltravel.customer.domain.vo.SortedItemVo;
 import com.boxhilltravel.customer.service.IAppConfigService;
 import lombok.RequiredArgsConstructor;
 import org.dromara.system.domain.vo.SysDictDataVo;
+import org.dromara.system.service.ISysConfigService;
 import org.dromara.system.service.ISysDictTypeService;
 import org.springframework.stereotype.Service;
 
@@ -23,9 +24,12 @@ public class AppConfigServiceImpl implements IAppConfigService {
 
     private final ISysDictTypeService dictTypeService;
 
+    private final ISysConfigService configService;
+
     @Override
     public AppConfigVo getAppConfig() {
         AppConfigVo vo = new AppConfigVo();
+        vo.setCskhChatEnabled(!"false".equalsIgnoreCase(configService.selectConfigByKey("site.cskh.chat.enabled")));
         Map<String, List<EnumItemVo>> enums = new LinkedHashMap<>();
         enums.put("travelStyle", buildItemsFromDict("holidays_tour_travel_style"));
         enums.put("travelCollection", buildItemsFromDict("holidays_tour_collection"));
