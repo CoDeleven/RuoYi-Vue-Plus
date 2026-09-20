@@ -233,6 +233,7 @@ public class HolidaysTourImportServiceImpl implements IHolidaysTourImportService
             entity.setItineraryId(itineraryId);
             entity.setTitle(row.getTitle());
             entity.setDescription(StringUtils.blankToDefault(row.getDescription(), ""));
+            entity.setActivityIcon(StringUtils.trim(row.getActivityIcon()));
             entity.setSubtitle(toSubtitleJson(row.getSubtitle()));
             entity.setSortOrder(row.getSortOrder() != null ? row.getSortOrder() : index);
             entity.setShowInPreview(isYes(row.getShowInPreview()) ? 1L : 0L);

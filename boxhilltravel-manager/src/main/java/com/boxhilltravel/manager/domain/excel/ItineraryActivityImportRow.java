@@ -33,6 +33,9 @@ public class ItineraryActivityImportRow implements Serializable {
     @ExcelProperty(value = "description")
     private String description;
 
+    @ExcelProperty(value = "activity_icon")
+    private String activityIcon;
+
     @ExcelProperty(value = "subtitle")
     private String subtitle;
 
