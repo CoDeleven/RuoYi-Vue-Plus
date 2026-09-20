@@ -15,4 +15,6 @@ public class AppConfigVo {
 
     private Map<String, List<SortedItemVo>> sortTypes;
 
+    private Boolean cskhChatEnabled;
+
 }
