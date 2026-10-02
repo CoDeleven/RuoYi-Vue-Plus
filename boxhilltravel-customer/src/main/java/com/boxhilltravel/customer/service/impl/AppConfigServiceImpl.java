@@ -30,6 +30,7 @@ public class AppConfigServiceImpl implements IAppConfigService {
     public AppConfigVo getAppConfig() {
         AppConfigVo vo = new AppConfigVo();
         vo.setCskhChatEnabled(!"false".equalsIgnoreCase(configService.selectConfigByKey("site.cskh.chat.enabled")));
+        vo.setExplorerPassEnabled(!"false".equalsIgnoreCase(configService.selectConfigByKey("site.explorer.pass.enabled")));
         Map<String, List<EnumItemVo>> enums = new LinkedHashMap<>();
         enums.put("travelStyle", buildItemsFromDict("holidays_tour_travel_style"));
         enums.put("travelCollection", buildItemsFromDict("holidays_tour_collection"));
