@@ -26,6 +26,15 @@ pipeline {
     }
 
     environment {
+        // ⚠️ 关键：把 build parameter 显式映射成环境变量，之后才能用 ${XXX} 裸写引用。
+        // Jenkins 的 parameters 只存在于 params.XXX，不在 Groovy binding 里；
+        // 若在 sh """..."""（双引号）里直接写 ${MAVEN_PROFILE}，Groovy 会去 binding 找它，
+        // 然后报：No such property: MAVEN_PROFILE for class: groovy.lang.Binding
+        MAVEN_PROFILE    = "${params.MAVEN_PROFILE}"
+        SKIP_TESTS       = "${params.SKIP_TESTS}"
+        USE_ALIYUN_MIRROR = "${params.USE_ALIYUN_MIRROR}"
+        DO_DEPLOY        = "${params.DO_DEPLOY}"
+
         APP_NAME       = 'ruoyi-vue-plus'
         IMAGE_NAME     = 'ruoyi/ruoyi-server'      // 构建出的镜像名
         CICD_HOME      = '/opt/ruoyi-cicd'         // 本套脚本在宿主机的存放目录
@@ -74,10 +83,12 @@ pipeline {
         stage('2. Maven 编译打包（JDK 21）') {
             steps {
                 script {
+                    // 单引号：${CICD_HOME} 保持为 shell 变量，交给 shell 展开
                     def mirrorOpt = params.USE_ALIYUN_MIRROR \
                         ? '-v ${CICD_HOME}/maven/settings.xml:/root/.m2/settings.xml:ro' : ''
                     // 用 Maven+JDK21 容器编译，宿主机无需安装 JDK/Maven
                     // jenkins-m2 卷做依赖缓存，第二次构建快很多
+                    // 下面 ${MAVEN_PROFILE} / ${SKIP_TESTS} 来自 environment 映射，可直接插值
                     sh """
                         docker run --rm \\
                           -v "\${WORKSPACE}:/app" \\
