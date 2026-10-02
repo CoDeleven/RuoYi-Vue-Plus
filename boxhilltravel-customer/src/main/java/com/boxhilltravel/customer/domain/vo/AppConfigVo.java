@@ -17,4 +17,6 @@ public class AppConfigVo {
 
     private Boolean cskhChatEnabled;
 
+    private Boolean explorerPassEnabled;
+
 }
