@@ -83,9 +83,21 @@ pipeline {
         stage('2. Maven 编译打包（JDK 21）') {
             steps {
                 script {
-                    // 单引号：${CICD_HOME} 保持为 shell 变量，交给 shell 展开
-                    def mirrorOpt = params.USE_ALIYUN_MIRROR \
-                        ? '-v ${CICD_HOME}/maven/settings.xml:/root/.m2/settings.xml:ro' : ''
+                    // ⚠️ 不要直接把 settings.xml 挂到 /root/.m2/settings.xml：
+                    // 若宿主机上该文件不存在，Docker 会自动把它创建成"目录"，
+                    // Maven 就会报 Non-readable settings ... (Is a directory)。
+                    // 这里改为：整个 maven 配置目录挂到独立路径 /root/.maven-conf，
+                    // 再用 mvn -s 显式指定，避免与该卷产生嵌套挂载。
+                    def settingsMount = ''
+                    def settingsArg   = ''
+                    if (params.USE_ALIYUN_MIRROR) {
+                        if (fileExists("${CICD_HOME}/maven/settings.xml")) {
+                            settingsMount = "-v ${CICD_HOME}/maven:/root/.maven-conf:ro"
+                            settingsArg   = '-s /root/.maven-conf/settings.xml'
+                        } else {
+                            echo "⚠️ 未找到 ${CICD_HOME}/maven/settings.xml，本次使用 Maven 默认中央仓库（可能很慢）"
+                        }
+                    }
                     // 用 Maven+JDK21 容器编译，宿主机无需安装 JDK/Maven
                     // jenkins-m2 卷做依赖缓存，第二次构建快很多
                     // 下面 ${MAVEN_PROFILE} / ${SKIP_TESTS} 来自 environment 映射，可直接插值
@@ -93,10 +105,12 @@ pipeline {
                         docker run --rm \\
                           -v "\${WORKSPACE}:/app" \\
                           -v jenkins-m2:/root/.m2 \\
-                          ${mirrorOpt} \\
+                          ${settingsMount} \\
                           -w /app \\
                           ${MAVEN_IMAGE} \\
-                          mvn -B -ntp clean package \\
+                          mvn -B -ntp ${settingsArg} \\
+                            -Dmaven.repo.local=/root/.m2/repository \\
+                            clean package \\
                             -P ${MAVEN_PROFILE} \\
                             -Dmaven.test.skip=${SKIP_TESTS}
                     """
@@ -110,11 +124,11 @@ pipeline {
         stage('3. 构建 Docker 镜像') {
             steps {
                 sh '''
-                    sudo mkdir -p ${BUILD_CTX}
-                    sudo cp ${CICD_HOME}/Dockerfile                         ${BUILD_CTX}/Dockerfile
-                    sudo cp ${WORKSPACE}/ruoyi-admin/target/ruoyi-admin.jar ${BUILD_CTX}/ruoyi-admin.jar
+                    mkdir -p ${BUILD_CTX}
+                    cp ${CICD_HOME}/Dockerfile                         ${BUILD_CTX}/Dockerfile
+                    cp ${WORKSPACE}/ruoyi-admin/target/ruoyi-admin.jar ${BUILD_CTX}/ruoyi-admin.jar
 
-                    sudo docker build \
+                    docker build \
                       --label "org.opencontainers.image.revision=${GIT_COMMIT_SHORT}" \
                       --label "org.opencontainers.image.version=${IMAGE_TAG}" \
                       --build-arg APP_PORT=${CONTAINER_PORT} \
@@ -122,26 +136,30 @@ pipeline {
                       -t ${IMAGE_NAME}:latest \
                       ${BUILD_CTX}
                 '''
-                sh 'sudo docker images ${IMAGE_NAME} --format "{{.Repository}}:{{.Tag}}  {{.Size}}" | head -5'
+                sh 'docker images ${IMAGE_NAME} --format "{{.Repository}}:{{.Tag}}  {{.Size}}" | head -5'
             }
         }
 
         stage('4. 蓝绿部署 + 健康检查 + 切换 Nginx') {
             when { expression { params.DO_DEPLOY } }
             steps {
-                sh '''
-                    sudo APP_NAME="${APP_NAME}" \
-                         IMAGE="${IMAGE_NAME}:${IMAGE_TAG}" \
-                         SPRING_PROFILE="${MAVEN_PROFILE}" \
-                         BLUE_PORT="${BLUE_PORT}" \
-                         GREEN_PORT="${GREEN_PORT}" \
-                         CONTAINER_PORT="${CONTAINER_PORT}" \
-                         HEALTH_PATH="${HEALTH_PATH}" \
-                         HEALTH_FALLBACK="${HEALTH_FALLBACK}" \
-                         HEALTH_TIMEOUT="${HEALTH_TIMEOUT}" \
-                         DEPLOY_HOME="${DEPLOY_HOME}" \
-                         ${CICD_HOME}/scripts/deploy.sh
-                '''
+                // ⚠️ 不要写 sudo VAR=... cmd：sudo 默认禁止传环境变量，会报
+                // "sorry, you are not allowed to set the following environment variables"
+                // 改成命令行参数传值，sudo 对参数不做限制。
+                // ${MAVEN_PROFILE} / ${IMAGE_TAG} 等来自 environment 映射，可安全插值。
+                sh """
+                    sudo ${CICD_HOME}/scripts/deploy.sh \\
+                      --app-name=${APP_NAME} \\
+                      --image=${IMAGE_NAME}:${IMAGE_TAG} \\
+                      --profile=${MAVEN_PROFILE} \\
+                      --blue-port=${BLUE_PORT} \\
+                      --green-port=${GREEN_PORT} \\
+                      --container-port=${CONTAINER_PORT} \\
+                      --health-path=${HEALTH_PATH} \\
+                      --health-fallback=${HEALTH_FALLBACK} \\
+                      --health-timeout=${HEALTH_TIMEOUT} \\
+                      --deploy-home=${DEPLOY_HOME}
+                """
             }
         }
 
@@ -149,11 +167,11 @@ pipeline {
             when { expression { params.DO_DEPLOY } }
             steps {
                 sh '''
-                    ACTIVE_PORT=$(sudo cat ${DEPLOY_HOME}/CURRENT_PORT)
+                    ACTIVE_PORT=$(cat ${DEPLOY_HOME}/CURRENT_PORT)
                     echo "========== 当前活跃容器 =========="
-                    sudo docker ps --filter "name=^ruoyi-" --format "table {{.Names}}\\t{{.Image}}\\t{{.Status}}"
+                    docker ps --filter "name=^ruoyi-" --format "table {{.Names}}\\t{{.Image}}\\t{{.Status}}"
                     echo "========== Nginx 转发目标 =========="
-                    sudo cat /etc/nginx/conf.d/ruoyi-upstream.conf
+                    cat /etc/nginx/conf.d/ruoyi-upstream.conf
                     echo "========== 经 Nginx 探活 =========="
                     curl -s -m 10 "http://127.0.0.1:${ACTIVE_PORT}${HEALTH_PATH}" | head -c 300; echo
                 '''
@@ -164,9 +182,12 @@ pipeline {
     post {
         success { echo "部署成功：${IMAGE_NAME}:${env.IMAGE_TAG}" }
         failure {
+            // 注意：post 里的辅助命令一律加 || true，
+            // 否则排查命令自己失败会掩盖真正的构建错误（AbortException 覆盖原始异常）
             echo '构建/部署失败，输出最近容器日志辅助排查：'
-            sh 'sudo docker ps -a --filter "name=^ruoyi-" --format "{{.Names}} {{.Status}}"'
-            sh 'sudo docker logs --tail 200 $(sudo docker ps -a --filter "name=^ruoyi-" --format "{{.Names}}" | head -1) 2>/dev/null || true'
+            sh 'docker ps -a --filter "name=^ruoyi-" --format "{{.Names}} {{.Status}}" || true'
+            sh 'docker logs --tail 200 $(docker ps -a --filter "name=^ruoyi-" --format "{{.Names}}" | head -1) 2>/dev/null || true'
+            echo '提示：真正的失败原因在本日志更靠前的位置，请往上翻找第一个 [ERROR] / 红色段落'
         }
     }
 }
