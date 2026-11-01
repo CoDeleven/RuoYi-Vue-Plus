@@ -9,17 +9,23 @@ import com.boxhilltravel.core.domain.HolidaysOrderPayment;
 import com.boxhilltravel.core.domain.HolidaysOrderTraveler;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderExtraVo;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderPaymentVo;
+import com.boxhilltravel.core.domain.vo.HolidaysOrderRefundVo;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderTravelerVo;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderVo;
 import com.boxhilltravel.core.mapper.HolidaysDepartureMapper;
 import com.boxhilltravel.core.mapper.HolidaysOrderExtraMapper;
 import com.boxhilltravel.core.mapper.HolidaysOrderMapper;
 import com.boxhilltravel.core.mapper.HolidaysOrderPaymentMapper;
+import com.boxhilltravel.core.mapper.HolidaysOrderRefundMapper;
 import com.boxhilltravel.core.mapper.HolidaysOrderTravelerMapper;
 import com.boxhilltravel.customer.domain.bo.CheckoutQuoteBo;
 import com.boxhilltravel.customer.domain.bo.CreateOrderBo;
 import com.boxhilltravel.customer.domain.vo.OrderListItemVo;
 import com.boxhilltravel.customer.service.ICustomerOrderService;
+import com.boxhilltravel.payment.constant.PaymentStatus;
+import com.boxhilltravel.payment.domain.vo.PaymentCheckoutVo;
+import com.boxhilltravel.payment.config.StripeProperties;
+import com.boxhilltravel.payment.service.StripePaymentService;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.exception.ServiceException;
@@ -48,10 +54,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class CustomerOrderServiceImpl implements ICustomerOrderService {
 
     private static final Integer ORDER_STATUS_PENDING_PAYMENT = 0;
-    private static final Integer ORDER_STATUS_PAID = 1;
-    private static final String PAYMENT_STATUS_PENDING = "PENDING";
-    private static final String PAYMENT_STATUS_PAID = "PAID";
-    private static final String PAYMENT_METHOD_PLACEHOLDER = "PLACEHOLDER";
     private static final DateTimeFormatter ORDER_NO_TIME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final CheckoutServiceImpl checkoutService;
@@ -60,7 +62,10 @@ public class CustomerOrderServiceImpl implements ICustomerOrderService {
     private final HolidaysOrderTravelerMapper travelerMapper;
     private final HolidaysOrderExtraMapper extraMapper;
     private final HolidaysOrderPaymentMapper paymentMapper;
+    private final HolidaysOrderRefundMapper refundMapper;
     private final HolidaysDepartureMapper departureMapper;
+    private final StripePaymentService stripePaymentService;
+    private final StripeProperties stripeProperties;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -93,7 +98,9 @@ public class CustomerOrderServiceImpl implements ICustomerOrderService {
         order.setExtrasAmount(quote.extrasAmount());
         order.setTotalAmount(quote.tourAmount().add(quote.extrasAmount()));
         order.setPaidAmount(BigDecimal.ZERO);
+        order.setRefundedAmount(BigDecimal.ZERO);
         order.setStatus(ORDER_STATUS_PENDING_PAYMENT);
+        order.setPaymentDeadline(LocalDateTime.now().plusMinutes(stripeProperties.getPaymentExpireMinutes()));
         fillContact(order, bo.getContact());
         order.setTermsAccepted(bo.getTermsAccepted());
         order.setRemark(StringUtils.trim(bo.getRemark()));
@@ -120,38 +127,8 @@ public class CustomerOrderServiceImpl implements ICustomerOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public HolidaysOrderVo pay(Long id) {
-        Long userId = LoginHelper.getUserId();
-        HolidaysOrder order = orderMapper.selectOne(Wrappers.lambdaQuery(HolidaysOrder.class)
-            .eq(HolidaysOrder::getId, id)
-            .eq(HolidaysOrder::getCustomerUserId, userId));
-        if (order == null) {
-            throw new ServiceException("Order not found");
-        }
-        if (ORDER_STATUS_PAID.equals(order.getStatus())) {
-            return queryById(id);
-        }
-        if (!ORDER_STATUS_PENDING_PAYMENT.equals(order.getStatus())) {
-            throw new ServiceException("Only pending payment orders can be paid");
-        }
-
-        LocalDateTime paidTime = LocalDateTime.now();
-        int updated = orderMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrder.class)
-            .set(HolidaysOrder::getStatus, ORDER_STATUS_PAID)
-            .set(HolidaysOrder::getPaidAmount, order.getTotalAmount())
-            .eq(HolidaysOrder::getId, id)
-            .eq(HolidaysOrder::getCustomerUserId, userId)
-            .eq(HolidaysOrder::getStatus, ORDER_STATUS_PENDING_PAYMENT));
-        if (updated == 0) {
-            throw new ServiceException("Order payment status has changed");
-        }
-
-        paymentMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrderPayment.class)
-            .set(HolidaysOrderPayment::getStatus, PAYMENT_STATUS_PAID)
-            .set(HolidaysOrderPayment::getPaidTime, paidTime)
-            .eq(HolidaysOrderPayment::getOrderId, id)
-            .eq(HolidaysOrderPayment::getStatus, PAYMENT_STATUS_PENDING));
-        return queryById(id);
+    public PaymentCheckoutVo pay(Long id) {
+        return stripePaymentService.createCheckoutSession(id, LoginHelper.getUserId());
     }
 
     @Override
@@ -279,10 +256,10 @@ public class CustomerOrderServiceImpl implements ICustomerOrderService {
         HolidaysOrderPayment payment = new HolidaysOrderPayment();
         payment.setOrderId(order.getId());
         payment.setPaymentNo("PAY" + order.getOrderNo());
-        payment.setPaymentMethod(PAYMENT_METHOD_PLACEHOLDER);
+        payment.setPaymentMethod("STRIPE_CHECKOUT");
         payment.setAmount(order.getTotalAmount());
         payment.setCurrency(order.getCurrency());
-        payment.setStatus(PAYMENT_STATUS_PENDING);
+        payment.setStatus(PaymentStatus.PENDING);
         paymentMapper.insert(payment);
     }
 
@@ -301,6 +278,10 @@ public class CustomerOrderServiceImpl implements ICustomerOrderService {
         vo.setTravelers(travelers);
         vo.setExtras(extras);
         vo.setPayment(payment);
+        List<HolidaysOrderRefundVo> refunds = refundMapper.selectVoList(Wrappers.lambdaQuery(com.boxhilltravel.core.domain.HolidaysOrderRefund.class)
+            .eq(com.boxhilltravel.core.domain.HolidaysOrderRefund::getOrderId, vo.getId())
+            .orderByDesc(com.boxhilltravel.core.domain.HolidaysOrderRefund::getId));
+        vo.setRefunds(refunds);
     }
 
     private OrderListItemVo toListItemVo(HolidaysOrder order) {

@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Order payment placeholder object holidays_order_payment.
+ * Order payment object holidays_order_payment.
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -36,6 +36,18 @@ public class HolidaysOrderPayment extends BaseEntity {
     private String currency;
 
     private String status;
+
+    private String stripeCheckoutSessionId;
+
+    private String checkoutUrl;
+
+    private String stripePaymentIntentId;
+
+    private Long amountMinor;
+
+    private LocalDateTime checkoutExpiresAt;
+
+    private String failureCode;
 
     private LocalDateTime paidTime;
 
