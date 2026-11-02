@@ -205,8 +205,8 @@ stripe:
   enabled: true
   secret-key: ${STRIPE_SECRET_KEY:}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-  success-url: ${STRIPE_SUCCESS_URL:http://localhost:8088/checkout/success}
-  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:8088/checkout/success}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/checkout/success}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/checkout/success}
   payment-expire-minutes: ${STRIPE_PAYMENT_EXPIRE_MINUTES:30}
   expiration-scan-ms: ${STRIPE_EXPIRATION_SCAN_MS:60000}
   supported-currencies: ${STRIPE_SUPPORTED_CURRENCIES:usd,eur,gbp,aud}

@@ -45,15 +45,17 @@ The existing Checkout Session call is in:
 
 1. Run [script/sql/boxhilltravel_stripe_payment.sql](script/sql/boxhilltravel_stripe_payment.sql) against the application database.
 2. In Stripe Test mode, configure a webhook endpoint at `/api/v1/payments/stripe/webhook` and subscribe to the Checkout, payment failure, expiration, and refund events handled by `StripeWebhookService`.
-3. Put the endpoint signing secret in `STRIPE_WEBHOOK_SECRET`. The endpoint must receive the raw request body so signature verification can succeed.
+3. Put the endpoint signing secret in `STRIPE_WEBHOOK_SECRET`. The endpoint must receive the raw request body so signature verification can succeed. For local development, run `stripe listen` with `127.0.0.1:8088` and use the `whsec_...` printed by that same listener process.
 4. Set the public H5 URL in `STRIPE_SUCCESS_URL` and `STRIPE_CANCEL_URL`, then set `STRIPE_ENABLED=true`.
 5. Start the backend and H5, create an order, and use **Pay securely with Stripe** to redirect to the Stripe-hosted Checkout page.
 6. Use Stripe test card `4242 4242 4242 4242`, any future expiry date, and any CVC in Test mode.
 7. Confirm that the webhook changes the order to paid, and test cancellation, expiration, payment failure, partial refund, and full refund.
 
+The tour table stores values from the `holidays_currency_unit` dictionary (for example, `1`), while Stripe requires a three-letter ISO code. The payment module resolves the dictionary value to its ISO label (for example, `1` → `usd`) before creating a Checkout Session or refund.
+
 ### Integration consistency check
 
-The Scenario A field list removed the existing `client_reference_id`, `expires_at`, and Checkout Session `metadata` parameters. The current webhook implementation uses Session metadata to resolve `orderId`, so before end-to-end testing it must be changed to resolve the order from the stored Checkout Session ID, or the metadata parameter must be restored. This task intentionally left surrounding webhook code unchanged per the Scenario A constraints.
+The Checkout Session intentionally does not include `metadata`. Webhook handling resolves the order from the stored Checkout Session ID, with PaymentIntent lookup as a fallback, so the payment flow remains compatible with the configured Checkout Session fields.
 
 ## Flow Overview
 

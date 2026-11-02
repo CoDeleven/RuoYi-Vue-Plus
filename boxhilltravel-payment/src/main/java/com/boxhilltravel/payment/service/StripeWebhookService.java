@@ -138,13 +138,17 @@ public class StripeWebhookService {
     @Transactional(rollbackFor = Exception.class)
     private void markPaid(Map<String, Object> object) {
         Long orderId = metadataOrderId(object);
+        HolidaysOrderPayment payment = paymentForWebhookObject(object);
+        if (orderId == null && payment != null) {
+            orderId = payment.getOrderId();
+        }
         if (orderId == null) {
-            return;
+            throw new ServiceException("Stripe Checkout Session is not linked to a local order");
         }
         HolidaysOrder order = orderMapper.selectById(orderId);
-        HolidaysOrderPayment payment = paymentForOrder(orderId);
+        if (payment == null) payment = paymentForOrder(orderId);
         if (order == null || payment == null) {
-            return;
+            throw new ServiceException("Stripe payment record is not linked to a local order");
         }
         String currency = MoneyMinorUnitConverter.normalizeCurrency(String.valueOf(object.get("currency")));
         String orderCurrency = currencyResolver.resolve(order.getCurrency());
@@ -197,6 +201,10 @@ public class StripeWebhookService {
 
     private void expire(Map<String, Object> object) {
         Long orderId = metadataOrderId(object);
+        if (orderId == null) {
+            HolidaysOrderPayment payment = paymentForWebhookObject(object);
+            orderId = payment == null ? null : payment.getOrderId();
+        }
         if (orderId != null) {
             paymentService.expireOrder(orderId);
         }
@@ -270,6 +278,25 @@ public class StripeWebhookService {
     private HolidaysOrderPayment paymentForOrder(Long orderId) {
         return paymentMapper.selectOne(Wrappers.lambdaQuery(HolidaysOrderPayment.class)
             .eq(HolidaysOrderPayment::getOrderId, orderId)
+            .orderByDesc(HolidaysOrderPayment::getId)
+            .last("limit 1"));
+    }
+
+    private HolidaysOrderPayment paymentForWebhookObject(Map<String, Object> object) {
+        String sessionId = string(object.get("id"));
+        if (StringUtils.isNotBlank(sessionId)) {
+            HolidaysOrderPayment payment = paymentMapper.selectOne(Wrappers.lambdaQuery(HolidaysOrderPayment.class)
+                .eq(HolidaysOrderPayment::getStripeCheckoutSessionId, sessionId)
+                .orderByDesc(HolidaysOrderPayment::getId)
+                .last("limit 1"));
+            if (payment != null) return payment;
+        }
+        String paymentIntent = string(object.get("payment_intent"));
+        if (StringUtils.isBlank(paymentIntent)) {
+            paymentIntent = string(object.get("id"));
+        }
+        return paymentMapper.selectOne(Wrappers.lambdaQuery(HolidaysOrderPayment.class)
+            .eq(HolidaysOrderPayment::getStripePaymentIntentId, paymentIntent)
             .orderByDesc(HolidaysOrderPayment::getId)
             .last("limit 1"));
     }

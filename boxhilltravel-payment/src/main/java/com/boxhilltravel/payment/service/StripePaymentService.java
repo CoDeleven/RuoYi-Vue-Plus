@@ -61,6 +61,10 @@ public class StripePaymentService {
         validatePayable(order);
         HolidaysOrderPayment payment = getPayment(orderId);
         LocalDateTime now = LocalDateTime.now();
+        if (order.getPaymentDeadline() == null && payment.getCheckoutExpiresAt() != null) {
+            order.setPaymentDeadline(payment.getCheckoutExpiresAt());
+            orderMapper.updateById(order);
+        }
         if (payment.getCheckoutExpiresAt() != null && payment.getCheckoutExpiresAt().isAfter(now)
             && StringUtils.isNotBlank(payment.getStripeCheckoutSessionId())
             && (PaymentStatus.CHECKOUT_CREATED.equals(payment.getStatus())
@@ -81,6 +85,10 @@ public class StripePaymentService {
             : now.plusMinutes(properties.getPaymentExpireMinutes());
         if (!expiresAt.isAfter(now)) {
             throw new ServiceException("Payment deadline has expired");
+        }
+        if (order.getPaymentDeadline() == null) {
+            order.setPaymentDeadline(expiresAt);
+            orderMapper.updateById(order);
         }
 
         SessionCreateParams.Builder builder = SessionCreateParams.builder()
