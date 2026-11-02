@@ -10,11 +10,13 @@ import com.boxhilltravel.core.domain.HolidaysOrderTraveler;
 import com.boxhilltravel.core.domain.bo.HolidaysOrderBo;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderExtraVo;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderPaymentVo;
+import com.boxhilltravel.core.domain.vo.HolidaysOrderRefundVo;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderTravelerVo;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderVo;
 import com.boxhilltravel.core.mapper.HolidaysOrderExtraMapper;
 import com.boxhilltravel.core.mapper.HolidaysOrderMapper;
 import com.boxhilltravel.core.mapper.HolidaysOrderPaymentMapper;
+import com.boxhilltravel.core.mapper.HolidaysOrderRefundMapper;
 import com.boxhilltravel.core.mapper.HolidaysOrderTravelerMapper;
 import com.boxhilltravel.manager.service.IHolidaysOrderService;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +46,7 @@ public class HolidaysOrderServiceImpl implements IHolidaysOrderService {
     private final HolidaysOrderTravelerMapper travelerMapper;
     private final HolidaysOrderExtraMapper extraMapper;
     private final HolidaysOrderPaymentMapper paymentMapper;
+    private final HolidaysOrderRefundMapper refundMapper;
 
     @Override
     public PageResult<HolidaysOrderVo> queryPageList(HolidaysOrderBo bo, PageQuery pageQuery) {
@@ -127,6 +130,10 @@ public class HolidaysOrderServiceImpl implements IHolidaysOrderService {
         vo.setTravelers(travelers);
         vo.setExtras(extras);
         vo.setPayment(payment);
+        List<HolidaysOrderRefundVo> refunds = refundMapper.selectVoList(Wrappers.lambdaQuery(com.boxhilltravel.core.domain.HolidaysOrderRefund.class)
+            .eq(com.boxhilltravel.core.domain.HolidaysOrderRefund::getOrderId, vo.getId())
+            .orderByDesc(com.boxhilltravel.core.domain.HolidaysOrderRefund::getId));
+        vo.setRefunds(refunds);
     }
 
 }

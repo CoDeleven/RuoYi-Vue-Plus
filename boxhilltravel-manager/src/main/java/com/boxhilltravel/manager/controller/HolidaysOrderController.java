@@ -4,6 +4,10 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.boxhilltravel.core.domain.bo.HolidaysOrderBo;
 import com.boxhilltravel.core.domain.vo.HolidaysOrderVo;
 import com.boxhilltravel.manager.service.IHolidaysOrderService;
+import com.boxhilltravel.payment.domain.bo.RefundOrderBo;
+import com.boxhilltravel.payment.domain.vo.RefundVo;
+import com.boxhilltravel.payment.service.StripeRefundService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.PageResult;
@@ -17,8 +21,11 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 /**
  * Order manager controller.
@@ -30,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HolidaysOrderController extends BaseController {
 
     private final IHolidaysOrderService holidaysOrderService;
+    private final StripeRefundService stripeRefundService;
 
     @SaCheckPermission("boxhilltravel_manager:order:list")
     @GetMapping("/list")
@@ -49,6 +57,21 @@ public class HolidaysOrderController extends BaseController {
     @PutMapping("/{id}/markCompleted")
     public R<Void> markCompleted(@NotNull(message = "{boxhilltravel.validation.orderId.required}") @PathVariable Long id) {
         return toAjax(holidaysOrderService.markCompleted(id));
+    }
+
+    @SaCheckPermission("boxhilltravel_manager:order:refund")
+    @Log(title = "Order refund", businessType = BusinessType.UPDATE)
+    @RepeatSubmit
+    @PostMapping("/{id}/refund")
+    public R<RefundVo> refund(@NotNull(message = "{boxhilltravel.validation.orderId.required}") @PathVariable Long id,
+                              @Valid @RequestBody RefundOrderBo bo) {
+        return R.ok(stripeRefundService.refund(id, bo));
+    }
+
+    @SaCheckPermission("boxhilltravel_manager:order:query")
+    @GetMapping("/{id}/refunds")
+    public R<List<RefundVo>> refunds(@NotNull(message = "{boxhilltravel.validation.orderId.required}") @PathVariable Long id) {
+        return R.ok(stripeRefundService.list(id));
     }
 
 }

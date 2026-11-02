@@ -200,6 +200,20 @@ xss:
     - /system/notice
     - /warm-flow/save-json
 
+--- # Stripe payment configuration
+stripe:
+  enabled: true
+  secret-key: ${STRIPE_SECRET_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/checkout/success}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/checkout/success}
+  payment-expire-minutes: ${STRIPE_PAYMENT_EXPIRE_MINUTES:30}
+  expiration-scan-ms: ${STRIPE_EXPIRATION_SCAN_MS:60000}
+  supported-currencies: ${STRIPE_SUPPORTED_CURRENCIES:usd,eur,gbp,aud}
+  max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:2}
+  connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:30000}
+  read-timeout-ms: ${STRIPE_READ_TIMEOUT_MS:80000}
+
 --- # 分布式锁 lock4j 全局配置
 lock4j:
   # 获取分布式锁超时时间，默认为 3000 毫秒

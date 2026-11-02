@@ -10,6 +10,7 @@ import org.dromara.common.mybatis.core.domain.BaseEntity;
 import java.io.Serial;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Customer order object holidays_order.
@@ -60,6 +61,10 @@ public class HolidaysOrder extends BaseEntity {
     private BigDecimal totalAmount;
 
     private BigDecimal paidAmount;
+
+    private BigDecimal refundedAmount;
+
+    private LocalDateTime paymentDeadline;
 
     private Integer status;
 

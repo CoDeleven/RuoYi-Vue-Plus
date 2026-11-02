@@ -59,6 +59,10 @@ public class HolidaysOrderVo implements Serializable {
 
     private BigDecimal paidAmount;
 
+    private BigDecimal refundedAmount;
+
+    private LocalDateTime paymentDeadline;
+
     private Integer status;
 
     private String contactName;
@@ -88,5 +92,7 @@ public class HolidaysOrderVo implements Serializable {
     private List<HolidaysOrderExtraVo> extras;
 
     private HolidaysOrderPaymentVo payment;
+
+    private List<HolidaysOrderRefundVo> refunds;
 
 }

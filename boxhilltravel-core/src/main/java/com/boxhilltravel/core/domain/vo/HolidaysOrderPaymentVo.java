@@ -33,6 +33,18 @@ public class HolidaysOrderPaymentVo implements Serializable {
 
     private String status;
 
+    private String stripeCheckoutSessionId;
+
+    private String checkoutUrl;
+
+    private String stripePaymentIntentId;
+
+    private Long amountMinor;
+
+    private LocalDateTime checkoutExpiresAt;
+
+    private String failureCode;
+
     private LocalDateTime paidTime;
 
 }

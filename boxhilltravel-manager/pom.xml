@@ -24,6 +24,10 @@
             <artifactId>boxhilltravel-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.boxhilltravel</groupId>
+            <artifactId>boxhilltravel-payment</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.dromara</groupId>
             <artifactId>ruoyi-system</artifactId>
         </dependency>
