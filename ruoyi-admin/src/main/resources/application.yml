@@ -209,6 +209,7 @@ stripe:
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/checkout/success}
   payment-expire-minutes: ${STRIPE_PAYMENT_EXPIRE_MINUTES:30}
   expiration-scan-ms: ${STRIPE_EXPIRATION_SCAN_MS:60000}
+  recovery-scan-ms: ${STRIPE_RECOVERY_SCAN_MS:60000}
   supported-currencies: ${STRIPE_SUPPORTED_CURRENCIES:usd,eur,gbp,aud}
   max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:2}
   connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:30000}

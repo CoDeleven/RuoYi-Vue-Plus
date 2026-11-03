@@ -3,15 +3,12 @@ package com.boxhilltravel.payment.service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.boxhilltravel.core.domain.HolidaysOrder;
 import com.boxhilltravel.core.domain.HolidaysOrderPayment;
-import com.boxhilltravel.core.domain.HolidaysOrderRefund;
 import com.boxhilltravel.core.domain.StripeWebhookEvent;
 import com.boxhilltravel.core.mapper.HolidaysOrderMapper;
 import com.boxhilltravel.core.mapper.HolidaysOrderPaymentMapper;
-import com.boxhilltravel.core.mapper.HolidaysOrderRefundMapper;
 import com.boxhilltravel.core.mapper.StripeWebhookEventMapper;
 import com.boxhilltravel.payment.config.StripeProperties;
 import com.boxhilltravel.payment.constant.PaymentStatus;
-import com.boxhilltravel.payment.constant.RefundStatus;
 import com.boxhilltravel.payment.constant.WebhookStatus;
 import com.boxhilltravel.payment.util.MoneyMinorUnitConverter;
 import com.stripe.exception.SignatureVerificationException;
@@ -26,9 +23,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +47,7 @@ public class StripeWebhookService {
     private final StripeWebhookEventMapper eventMapper;
     private final HolidaysOrderMapper orderMapper;
     private final HolidaysOrderPaymentMapper paymentMapper;
-    private final HolidaysOrderRefundMapper refundMapper;
+    private final Clock stripeClock;
 
     /**
      * Verifies and accepts a Stripe webhook payload.
@@ -77,7 +75,7 @@ public class StripeWebhookService {
         record.setObjectId(rawObjectMap == null ? null : String.valueOf(rawObjectMap.get("id")));
         record.setPayload(payload);
         record.setProcessStatus(WebhookStatus.PENDING);
-        record.setReceivedAt(LocalDateTime.now());
+        record.setReceivedAt(LocalDateTime.now(stripeClock));
         try {
             eventMapper.insert(record);
         } catch (Exception ex) {
@@ -96,36 +94,49 @@ public class StripeWebhookService {
      */
     @Async
     public void processAsync(Long recordId) {
-        StripeWebhookEvent record = eventMapper.selectById(recordId);
-        if (record == null) {
-            return;
-        }
+        processAcceptedEvent(recordId);
+    }
+
+    /** Runs the inbox transaction before dispatching any remote refund request. */
+    public void processAcceptedEvent(Long recordId) {
+        Long refundId;
         try {
-            eventMapper.update(null, Wrappers.lambdaUpdate(StripeWebhookEvent.class)
-                .set(StripeWebhookEvent::getProcessStatus, WebhookStatus.PROCESSING)
-                .eq(StripeWebhookEvent::getId, recordId));
-            process(record);
-            eventMapper.update(null, Wrappers.lambdaUpdate(StripeWebhookEvent.class)
-                .set(StripeWebhookEvent::getProcessStatus, WebhookStatus.SUCCEEDED)
-                .set(StripeWebhookEvent::getProcessedAt, LocalDateTime.now())
-                .set(StripeWebhookEvent::getErrorMessage, null)
-                .eq(StripeWebhookEvent::getId, recordId));
+            refundId = selfProvider.getObject().processEvent(recordId);
         } catch (Exception ex) {
-            log.error("Stripe webhook processing failed, eventId={}", record.getEventId(), ex);
+            log.error("Stripe webhook processing failed, recordId={}", recordId, ex);
             eventMapper.update(null, Wrappers.lambdaUpdate(StripeWebhookEvent.class)
                 .set(StripeWebhookEvent::getProcessStatus, WebhookStatus.FAILED)
+                .set(StripeWebhookEvent::getProcessedAt, LocalDateTime.now(stripeClock))
                 .set(StripeWebhookEvent::getErrorMessage, StringUtils.substring(ex.getMessage(), 0, 1000))
-                .eq(StripeWebhookEvent::getId, recordId));
+                .eq(StripeWebhookEvent::getId, recordId)
+                .ne(StripeWebhookEvent::getProcessStatus, WebhookStatus.SUCCEEDED));
+            return;
+        }
+        if (refundId != null) {
+            try {
+                refundService.submitRefund(refundId);
+            } catch (Exception ex) {
+                log.error("Persisted Stripe refund will be retried, refundId={}", refundId, ex);
+            }
         }
     }
 
-    private void process(StripeWebhookEvent record) {
+    /**
+     * Processes domain changes and the inbox acknowledgement atomically. The public method
+     * is invoked through the Spring proxy; private transactional handlers do not start transactions.
+     */
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
+    public Long processEvent(Long recordId) {
+        StripeWebhookEvent record = eventMapper.selectOne(Wrappers.lambdaQuery(StripeWebhookEvent.class)
+            .eq(StripeWebhookEvent::getId, recordId).last("FOR UPDATE"));
+        if (record == null || WebhookStatus.SUCCEEDED.equals(record.getProcessStatus())) return null;
         Map<String, Object> root = JsonUtils.parseObject(record.getPayload(), Map.class);
         Map<String, Object> data = asMap(root.get("data"));
         Map<String, Object> object = asMap(data.get("object"));
+        Long refundId = null;
         switch (record.getEventType()) {
             case "checkout.session.completed", "checkout.session.async_payment_succeeded" ->
-                markPaid(object);
+                refundId = markPaid(object);
             case "checkout.session.async_payment_failed", "payment_intent.payment_failed" ->
                 markFailed(object);
             case "checkout.session.expired" -> expire(object);
@@ -133,10 +144,22 @@ public class StripeWebhookService {
             case "charge.refunded" -> updateChargeRefund(object);
             default -> log.debug("Ignoring unsupported Stripe event type={}", record.getEventType());
         }
+        eventMapper.update(null, Wrappers.lambdaUpdate(StripeWebhookEvent.class)
+            .set(StripeWebhookEvent::getProcessStatus, WebhookStatus.SUCCEEDED)
+            .set(StripeWebhookEvent::getProcessedAt, LocalDateTime.now(stripeClock))
+            .set(StripeWebhookEvent::getErrorMessage, null).eq(StripeWebhookEvent::getId, recordId));
+        return refundId;
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    private void markPaid(Map<String, Object> object) {
+    /** Returns failed or unfinished inbox entries, including deliveries accepted before a restart. */
+    public List<Long> findEventsToRetry() {
+        return eventMapper.selectList(Wrappers.lambdaQuery(StripeWebhookEvent.class)
+                .in(StripeWebhookEvent::getProcessStatus, WebhookStatus.PENDING, WebhookStatus.FAILED, WebhookStatus.PROCESSING)
+                .orderByAsc(StripeWebhookEvent::getProcessedAt).last("limit 50"))
+            .stream().map(StripeWebhookEvent::getId).toList();
+    }
+
+    private Long markPaid(Map<String, Object> object) {
         Long orderId = metadataOrderId(object);
         HolidaysOrderPayment payment = paymentForWebhookObject(object);
         if (orderId == null && payment != null) {
@@ -145,10 +168,24 @@ public class StripeWebhookService {
         if (orderId == null) {
             throw new ServiceException("Stripe Checkout Session is not linked to a local order");
         }
-        HolidaysOrder order = orderMapper.selectById(orderId);
+        HolidaysOrder order = orderMapper.selectByIdForUpdate(orderId);
         if (payment == null) payment = paymentForOrder(orderId);
+        else payment = paymentMapper.selectById(payment.getId());
         if (order == null || payment == null) {
             throw new ServiceException("Stripe payment record is not linked to a local order");
+        }
+        if (!orderId.equals(payment.getOrderId())) {
+            throw new ServiceException("Stripe payment is linked to a different order");
+        }
+        if (!"paid".equals(string(object.get("payment_status")))) {
+            // Checkout can complete before an asynchronous payment method collects funds.
+            if (Integer.valueOf(0).equals(order.getStatus()) && payment.getPaidTime() == null) {
+                paymentMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrderPayment.class)
+                    .set(HolidaysOrderPayment::getStatus, PaymentStatus.PROCESSING)
+                    .eq(HolidaysOrderPayment::getId, payment.getId())
+                    .in(HolidaysOrderPayment::getStatus, PaymentStatus.PENDING, PaymentStatus.CHECKOUT_CREATED));
+            }
+            return null;
         }
         String currency = MoneyMinorUnitConverter.normalizeCurrency(String.valueOf(object.get("currency")));
         String orderCurrency = currencyResolver.resolve(order.getCurrency());
@@ -158,24 +195,34 @@ public class StripeWebhookService {
             throw new ServiceException("Stripe payment amount or currency does not match order");
         }
         String paymentIntent = string(object.get("payment_intent"));
+        if (StringUtils.isBlank(paymentIntent)) throw new ServiceException("Stripe payment intent is missing");
+        if (Integer.valueOf(5).equals(order.getStatus())) return null;
+        if (order.getPaidAmount() != null && order.getPaidAmount().signum() > 0) {
+            // Duplicate or out-of-order success events must not reset refund/payment state.
+            return Integer.valueOf(4).equals(order.getStatus()) ? refundService.enqueueLatePaymentRefund(orderId) : null;
+        }
+        if (!Integer.valueOf(0).equals(order.getStatus()) && !Integer.valueOf(4).equals(order.getStatus())) return null;
+        if (order.getPaymentDeadline() == null && order.getCreateTime() != null) {
+            order.setPaymentDeadline(order.getCreateTime().plusMinutes(properties.getPaymentExpireMinutes()));
+            orderMapper.updateById(order);
+        }
+        boolean late = Integer.valueOf(4).equals(order.getStatus())
+            || (order.getPaymentDeadline() != null && !order.getPaymentDeadline().isAfter(LocalDateTime.now(stripeClock)));
+        if (late && Integer.valueOf(0).equals(order.getStatus())) {
+            paymentService.expireOrder(orderId);
+        }
         orderMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrder.class)
-            .set(HolidaysOrder::getStatus, 1)
+            .set(!late, HolidaysOrder::getStatus, 1)
             .set(HolidaysOrder::getPaidAmount, order.getTotalAmount())
             .eq(HolidaysOrder::getId, orderId)
             .in(HolidaysOrder::getStatus, 0, 4));
         paymentMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrderPayment.class)
-            .set(HolidaysOrderPayment::getStatus, PaymentStatus.PAID)
+            .set(HolidaysOrderPayment::getStatus, late ? PaymentStatus.EXPIRED : PaymentStatus.PAID)
             .set(HolidaysOrderPayment::getStripeCheckoutSessionId, string(object.get("id")))
             .set(HolidaysOrderPayment::getStripePaymentIntentId, paymentIntent)
-            .set(HolidaysOrderPayment::getPaidTime, LocalDateTime.now())
+            .set(HolidaysOrderPayment::getPaidTime, LocalDateTime.now(stripeClock))
             .eq(HolidaysOrderPayment::getId, payment.getId()));
-        if (order.getStatus() == 4) {
-            try {
-                refundService.createRefund(orderId, order.getTotalAmount(), "LATE_PAYMENT_AFTER_EXPIRATION");
-            } catch (Exception ex) {
-                log.error("Unable to automatically refund late Stripe payment, orderId={}", orderId, ex);
-            }
-        }
+        return late ? refundService.enqueueLatePaymentRefund(orderId) : null;
     }
 
     private void markFailed(Map<String, Object> object) {
@@ -196,7 +243,8 @@ public class StripeWebhookService {
             .set(HolidaysOrderPayment::getStatus, PaymentStatus.PAYMENT_FAILED)
             .set(HolidaysOrderPayment::getFailureCode, string(object.get("last_payment_error")))
             .eq(HolidaysOrderPayment::getOrderId, orderId)
-            .notIn(HolidaysOrderPayment::getStatus, PaymentStatus.PAID, PaymentStatus.REFUNDED));
+            .notIn(HolidaysOrderPayment::getStatus, PaymentStatus.PAID, PaymentStatus.REFUNDED,
+                PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.EXPIRED));
     }
 
     private void expire(Map<String, Object> object) {
@@ -210,19 +258,8 @@ public class StripeWebhookService {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
     private void updateRefund(Map<String, Object> object) {
-        String refundId = string(object.get("id"));
-        HolidaysOrderRefund refund = refundMapper.selectOne(Wrappers.lambdaQuery(HolidaysOrderRefund.class)
-            .eq(HolidaysOrderRefund::getStripeRefundId, refundId));
-        if (refund == null) {
-            return;
-        }
-        refund.setStatus(normalizeRefundStatus(string(object.get("status"))));
-        refundMapper.updateById(refund);
-        if (RefundStatus.SUCCEEDED.equals(refund.getStatus())) {
-            recalculateRefunds(refund.getOrderId());
-        }
+        refundService.updateRefund(string(object.get("id")), string(object.get("status")));
     }
 
     private void updateChargeRefund(Map<String, Object> object) {
@@ -233,32 +270,18 @@ public class StripeWebhookService {
             return;
         }
         long amountRefunded = number(object.get("amount_refunded"));
-        HolidaysOrder order = orderMapper.selectById(payment.getOrderId());
+        HolidaysOrder order = orderMapper.selectByIdForUpdate(payment.getOrderId());
         if (order == null) {
             return;
         }
         String currency = currencyResolver.resolve(order.getCurrency());
         int scale = java.util.Currency.getInstance(currency.toUpperCase()).getDefaultFractionDigits();
         BigDecimal refunded = BigDecimal.valueOf(amountRefunded).movePointLeft(scale);
+        if (refunded.signum() <= 0) return;
+        if (order.getRefundedAmount() != null) refunded = refunded.max(order.getRefundedAmount());
         order.setRefundedAmount(refunded);
         orderMapper.updateById(order);
         updatePaymentRefundStatus(order, payment, refunded);
-    }
-
-    private void recalculateRefunds(Long orderId) {
-        HolidaysOrder order = orderMapper.selectById(orderId);
-        HolidaysOrderPayment payment = paymentForOrder(orderId);
-        if (order == null || payment == null) {
-            return;
-        }
-        List<HolidaysOrderRefund> refunds = refundMapper.selectList(Wrappers.lambdaQuery(HolidaysOrderRefund.class)
-            .eq(HolidaysOrderRefund::getOrderId, orderId)
-            .eq(HolidaysOrderRefund::getStatus, RefundStatus.SUCCEEDED));
-        BigDecimal total = refunds.stream().map(HolidaysOrderRefund::getAmount)
-            .filter(java.util.Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
-        order.setRefundedAmount(total);
-        orderMapper.updateById(order);
-        updatePaymentRefundStatus(order, payment, total);
     }
 
     private void updatePaymentRefundStatus(HolidaysOrder order, HolidaysOrderPayment payment, BigDecimal refunded) {
@@ -271,7 +294,7 @@ public class StripeWebhookService {
             orderMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrder.class)
                 .set(HolidaysOrder::getStatus, 5)
                 .eq(HolidaysOrder::getId, order.getId())
-                .in(HolidaysOrder::getStatus, 1, 2, 3));
+                .in(HolidaysOrder::getStatus, 1, 2, 3, 4));
         }
     }
 
@@ -332,19 +355,6 @@ public class StripeWebhookService {
         } catch (NumberFormatException ex) {
             return 0;
         }
-    }
-
-    private String normalizeRefundStatus(String status) {
-        if ("succeeded".equalsIgnoreCase(status)) {
-            return RefundStatus.SUCCEEDED;
-        }
-        if ("failed".equalsIgnoreCase(status)) {
-            return RefundStatus.FAILED;
-        }
-        if ("canceled".equalsIgnoreCase(status)) {
-            return RefundStatus.CANCELED;
-        }
-        return RefundStatus.PENDING;
     }
 
 }

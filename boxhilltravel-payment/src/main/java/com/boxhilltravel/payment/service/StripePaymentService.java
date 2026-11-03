@@ -26,7 +26,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -47,6 +50,7 @@ public class StripePaymentService {
     private final HolidaysOrderMapper orderMapper;
     private final HolidaysOrderPaymentMapper paymentMapper;
     private final HolidaysDepartureMapper departureMapper;
+    private final Clock stripeClock;
 
     /**
      * Creates or reuses the Checkout Session for an order.
@@ -57,13 +61,17 @@ public class StripePaymentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public PaymentCheckoutVo createCheckoutSession(Long orderId, Long userId) {
-        HolidaysOrder order = getUserOrder(orderId, userId);
+        HolidaysOrder order = orderMapper.selectByIdForUpdate(orderId);
+        if (order == null || !userId.equals(order.getCustomerUserId())) {
+            throw new ServiceException("Order not found");
+        }
         validatePayable(order);
         HolidaysOrderPayment payment = getPayment(orderId);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(stripeClock);
         if (order.getPaymentDeadline() == null && payment.getCheckoutExpiresAt() != null) {
             order.setPaymentDeadline(payment.getCheckoutExpiresAt());
             orderMapper.updateById(order);
+            validatePayable(order);
         }
         if (payment.getCheckoutExpiresAt() != null && payment.getCheckoutExpiresAt().isAfter(now)
             && StringUtils.isNotBlank(payment.getStripeCheckoutSessionId())
@@ -82,7 +90,7 @@ public class StripePaymentService {
 
         LocalDateTime expiresAt = order.getPaymentDeadline() != null
             ? order.getPaymentDeadline()
-            : now.plusMinutes(properties.getPaymentExpireMinutes());
+            : (order.getCreateTime() == null ? now : order.getCreateTime()).plusMinutes(properties.getPaymentExpireMinutes());
         if (!expiresAt.isAfter(now)) {
             throw new ServiceException("Payment deadline has expired");
         }
@@ -106,7 +114,12 @@ public class StripePaymentService {
             .setIntegrationIdentifier("hosted_web_0002")
             .setOriginContext(SessionCreateParams.OriginContext.WEB)
             .setSuccessUrl(buildRedirectUrl(properties.getSuccessUrl(), order, false))
-            .setCancelUrl(buildRedirectUrl(properties.getCancelUrl(), order, true));
+            .setCancelUrl(buildRedirectUrl(properties.getCancelUrl(), order, true))
+            .setExpiresAt(checkoutExpiration(expiresAt))
+            .putMetadata("orderId", String.valueOf(orderId))
+            .putMetadata("paymentId", String.valueOf(payment.getId()))
+            .setPaymentIntentData(SessionCreateParams.PaymentIntentData.builder()
+                .putMetadata("orderId", String.valueOf(orderId)).build());
 
         addLineItem(builder, order.getTourName(), order.getTourAmount(), currency);
         if (order.getExtrasAmount() != null && order.getExtrasAmount().signum() > 0) {
@@ -124,7 +137,8 @@ public class StripePaymentService {
             payment.setStripeCheckoutSessionId(session.getId());
             payment.setStripePaymentIntentId(session.getPaymentIntent());
             payment.setAmountMinor(totalMinor);
-            payment.setCheckoutExpiresAt(expiresAt);
+            payment.setCheckoutExpiresAt(session.getExpiresAt() == null ? expiresAt
+                : LocalDateTime.ofInstant(Instant.ofEpochSecond(session.getExpiresAt()), stripeClock.getZone()));
             payment.setFailureCode(null);
             payment.setCheckoutUrl(session.getUrl());
             paymentMapper.updateById(payment);
@@ -157,9 +171,13 @@ public class StripePaymentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public boolean expireOrder(Long orderId) {
-        HolidaysOrder order = orderMapper.selectById(orderId);
-        if (order == null || !ORDER_STATUS_PENDING_PAYMENT.equals(order.getStatus())
-            || order.getPaymentDeadline() == null || order.getPaymentDeadline().isAfter(LocalDateTime.now())) {
+        HolidaysOrder order = orderMapper.selectByIdForUpdate(orderId);
+        if (order == null || !ORDER_STATUS_PENDING_PAYMENT.equals(order.getStatus())) return false;
+        if (order.getPaymentDeadline() == null && order.getCreateTime() != null) {
+            order.setPaymentDeadline(order.getCreateTime().plusMinutes(properties.getPaymentExpireMinutes()));
+            orderMapper.updateById(order);
+        }
+        if (order.getPaymentDeadline() == null || order.getPaymentDeadline().isAfter(LocalDateTime.now(stripeClock))) {
             return false;
         }
         int updated = orderMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrder.class)
@@ -176,6 +194,54 @@ public class StripePaymentService {
                 PaymentStatus.PROCESSING));
         releaseSeats(order);
         return true;
+    }
+
+    /** Returns expired local sessions whose remote closure still needs to be confirmed. */
+    public List<Long> findSessionsToExpire() {
+        return paymentMapper.selectList(Wrappers.lambdaQuery(HolidaysOrderPayment.class)
+                .eq(HolidaysOrderPayment::getStatus, PaymentStatus.EXPIRED)
+                .isNotNull(HolidaysOrderPayment::getStripeCheckoutSessionId)
+                .isNotNull(HolidaysOrderPayment::getCheckoutUrl)
+                .orderByAsc(HolidaysOrderPayment::getUpdateTime).last("limit 50"))
+            .stream().map(HolidaysOrderPayment::getId).toList();
+    }
+
+    /**
+     * Closes an expired reservation's Stripe session. A failed request leaves the URL in place
+     * so the recovery job can retry; expired sessions are never offered by the pay endpoint.
+     */
+    public void closeExpiredSession(Long paymentId) {
+        HolidaysOrderPayment payment = paymentMapper.selectById(paymentId);
+        if (payment == null || !PaymentStatus.EXPIRED.equals(payment.getStatus())
+            || StringUtils.isBlank(payment.getCheckoutUrl()) || StringUtils.isBlank(payment.getStripeCheckoutSessionId())) {
+            return;
+        }
+        try {
+            StripeClient client = requireClient();
+            Session session = client.v1().checkout().sessions().retrieve(payment.getStripeCheckoutSessionId());
+            if ("open".equals(session.getStatus())) {
+                session = client.v1().checkout().sessions().expire(payment.getStripeCheckoutSessionId());
+            }
+            if ("expired".equals(session.getStatus()) || "complete".equals(session.getStatus())) {
+                paymentMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrderPayment.class)
+                    .set(HolidaysOrderPayment::getCheckoutUrl, null)
+                    .eq(HolidaysOrderPayment::getId, paymentId)
+                    .eq(HolidaysOrderPayment::getStripeCheckoutSessionId, payment.getStripeCheckoutSessionId()));
+            }
+        } catch (StripeException ex) {
+            paymentMapper.update(null, Wrappers.lambdaUpdate(HolidaysOrderPayment.class)
+                .set(HolidaysOrderPayment::getUpdateTime, LocalDateTime.now(stripeClock))
+                .eq(HolidaysOrderPayment::getId, paymentId));
+            log.warn("Stripe session closure will be retried, sessionId={}", payment.getStripeCheckoutSessionId());
+        }
+    }
+
+    private long checkoutExpiration(LocalDateTime deadline) {
+        long now = stripeClock.instant().getEpochSecond();
+        long localDeadline = deadline.atZone(stripeClock.getZone()).toEpochSecond();
+        // Stripe requires at least 30 minutes from session creation. Leave a minute for transit;
+        // the local deadline remains authoritative and the recovery job closes the session then.
+        return Math.min(now + 24 * 60 * 60, Math.max(localDeadline, now + 31 * 60));
     }
 
     private void addLineItem(SessionCreateParams.Builder builder, String name, BigDecimal amount, String currency) {
@@ -223,7 +289,7 @@ public class StripePaymentService {
             }
             throw new ServiceException("Only pending payment orders can be paid");
         }
-        if (order.getPaymentDeadline() != null && !order.getPaymentDeadline().isAfter(LocalDateTime.now())) {
+        if (order.getPaymentDeadline() != null && !order.getPaymentDeadline().isAfter(LocalDateTime.now(stripeClock))) {
             throw new ServiceException("Payment deadline has expired");
         }
     }
@@ -269,7 +335,7 @@ public class StripePaymentService {
         vo.setCurrency(currencyResolver.resolve(order.getCurrency()));
         vo.setAmount(order.getTotalAmount());
         vo.setPaymentStatus(payment.getStatus());
-        vo.setExpiresAt(payment.getCheckoutExpiresAt());
+        vo.setExpiresAt(order.getPaymentDeadline() != null ? order.getPaymentDeadline() : payment.getCheckoutExpiresAt());
         return vo;
     }
 

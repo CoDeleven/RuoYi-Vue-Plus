@@ -55,7 +55,28 @@ The tour table stores values from the `holidays_currency_unit` dictionary (for e
 
 ### Integration consistency check
 
-The Checkout Session intentionally does not include `metadata`. Webhook handling resolves the order from the stored Checkout Session ID, with PaymentIntent lookup as a fallback, so the payment flow remains compatible with the configured Checkout Session fields.
+Checkout Sessions include `orderId` and `paymentId` metadata; PaymentIntents include `orderId`. Existing Sessions remain supported through the stored Checkout Session ID and PaymentIntent fallback lookups.
+
+### Reservation expiration and refund recovery
+
+- `STRIPE_PAYMENT_EXPIRE_MINUTES` defaults to **30 minutes from order creation**. Retrying checkout does not extend the deadline. Legacy orders with a missing deadline use their creation time plus this duration.
+- `STRIPE_EXPIRATION_SCAN_MS` defaults to **60000**. The reservation task cancels overdue unpaid orders and releases seats once. It does not wait for a Stripe network request.
+- `STRIPE_RECOVERY_SCAN_MS` defaults to **60000**. A separate bounded worker pool closes expired local Checkout Sessions, retries unfinished webhook events, and submits/reconciles pending refunds. Restart the backend after deploying these changes.
+- Stripe requires a new Session expiration to be at least 30 minutes away. The Session request uses a valid expiration with transit allowance; the original local deadline remains authoritative. At that local deadline the recovery worker actively expires the Session. Network failures or the scan interval can leave a short window where the Stripe page still accepts payment; a paid webhook for an expired/canceled reservation queues a full refund and never makes the canceled order fulfillable.
+- Only `payment_status=paid` settles an order. An unpaid `checkout.session.completed` waits for asynchronous payment success.
+- Late-payment refunds are durably recorded with reason `LATE_PAYMENT_AFTER_EXPIRATION` in the same transaction as local payment/cancellation changes. Network/API errors preserve `PENDING` and retry the same refund record and idempotency key. Remote metadata is reconciled before creating a refund, including after Stripe's idempotency key retention window. Pending refunds reserve their amount against additional manager requests.
+- A successful refund updates the aggregate and order state even if the refund webhook is delayed. Stripe-confirmed `FAILED`/`CANCELED` refunds remain visible for administrative handling; technical retries do not silently create replacement refunds after an explicit failure.
+- A new SQL migration is not required for these recovery changes; they reuse the existing refund/event tables from the Stripe migration above. Deploy the updated backend and keep the required payment/refund webhook forwarding active.
+
+### Automated regression checks
+
+Use Java 21. Install the reactor dependencies with `mvn -pl ruoyi-admin -am -Dmaven.test.skip=true install`, then run:
+
+```shell
+mvn -pl ruoyi-admin -Dmaven.test.skip=false -Dtest=StripeExpirationRegressionTest,StripePaymentRecoveryTest,StripeRecoveryDispatchTest test
+```
+
+The tests use an isolated in-memory H2 database and a mocked Stripe client. They cover deadline races, cancellation, single seat release, concurrent/duplicate events, unpaid asynchronous payments, transaction rollback, network failures, lost responses after 24 hours, session closure retry, pending refund reservations, refund reconciliation without a webhook, and the actual async recovery executor. No real Stripe refund is submitted by these tests.
 
 ## Flow Overview
 
