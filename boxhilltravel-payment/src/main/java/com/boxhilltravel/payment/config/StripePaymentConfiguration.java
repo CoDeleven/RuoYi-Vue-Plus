@@ -6,7 +6,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.StringUtils;
+
+import java.time.Clock;
 
 /**
  * Stripe SDK configuration.
@@ -15,6 +18,22 @@ import org.springframework.util.StringUtils;
 @EnableScheduling
 @EnableConfigurationProperties(StripeProperties.class)
 public class StripePaymentConfiguration {
+
+    @Bean
+    public Clock stripeClock() {
+        return Clock.systemDefaultZone();
+    }
+
+    /** Keeps slow Stripe recovery requests off the reservation expiration scheduler. */
+    @Bean(value = "stripeRecoveryExecutor", defaultCandidate = false)
+    public ThreadPoolTaskExecutor stripeRecoveryExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("stripe-recovery-");
+        return executor;
+    }
 
     @Bean
     @ConditionalOnProperty(prefix = "stripe", name = "enabled", havingValue = "true")
