@@ -147,6 +147,11 @@ public class HolidaysTourVo implements Serializable {
     private Long status;
 
     /**
+     * 展示排序，数值越小越靠前
+     */
+    private Integer sortOrder;
+
+    /**
      * SEO标题
      */
     private String seoTitle;

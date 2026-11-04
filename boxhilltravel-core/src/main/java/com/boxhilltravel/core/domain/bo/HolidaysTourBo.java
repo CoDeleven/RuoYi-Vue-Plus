@@ -4,6 +4,7 @@ import com.boxhilltravel.core.domain.HolidaysTour;
 import io.github.linpeilie.annotations.AutoMapper;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -152,6 +153,12 @@ public class HolidaysTourBo implements Serializable {
      */
     @NotNull(message = "状态 0草稿 1上架 2下架不能为空", groups = { AddGroup.class, EditGroup.class })
     private Long status;
+
+    /**
+     * 展示排序，数值越小越靠前
+     */
+    @Min(value = 0, message = "排序不能小于0")
+    private Integer sortOrder;
 
     /**
      * SEO标题

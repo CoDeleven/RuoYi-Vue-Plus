@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
 public class HolidaysTourCustomerServiceImpl implements IHolidaysTourCustomerService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "duration_days", "sale_price");
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "duration_days", "sale_price", "sort_order");
     private static final Set<String> ALLOWED_SORT_DIRECTIONS = Set.of("asc", "desc");
 
     private final HolidaysTourMapper tourMapper;
