@@ -143,7 +143,7 @@ public class HolidaysTourServiceImpl implements IHolidaysTourService {
             .eqIfText(HolidaysTour::getSeoDescription, bo.getSeoDescription())
             .eqIfText(HolidaysTour::getSeoKeywords, bo.getSeoKeywords())
             .betweenParams(HolidaysTour::getDeletedAt, params, "beginDeletedAt", "endDeletedAt")
-            .orderByAsc(HolidaysTour::getId)
+            .orderByAsc(HolidaysTour::getSortOrder, HolidaysTour::getId)
             .build();
         applyCountryFilter(lqw, bo.getCountryName());
         return lqw;
@@ -160,6 +160,9 @@ public class HolidaysTourServiceImpl implements IHolidaysTourService {
     public Boolean insertByBo(HolidaysTourBo bo) {
         validateCollectionTag(bo.getCollectionTag());
         HolidaysTour add = MapstructUtils.convert(bo, HolidaysTour.class);
+        if (add.getSortOrder() == null) {
+            add.setSortOrder(nextSortOrder());
+        }
         validEntityBeforeSave(add);
         boolean flag = holidaysTourMapper.insert(add) > 0;
         if (flag) {
@@ -210,6 +213,35 @@ public class HolidaysTourServiceImpl implements IHolidaysTourService {
         return flag;
     }
 
+
+    /**
+     * 修改线路展示排序
+     *
+     * @param id 主键
+     * @param sortOrder 排序值，越小越靠前
+     * @return 是否修改成功
+     */
+    @Override
+    public Boolean updateSortOrder(Long id, Integer sortOrder) {
+        if (id == null || sortOrder == null || sortOrder < 0) {
+            throw new ServiceException("排序值无效");
+        }
+        return holidaysTourMapper.lambda()
+            .set(HolidaysTour::getSortOrder, sortOrder)
+            .eq(HolidaysTour::getId, id)
+            .update();
+    }
+
+    /**
+     * 新增线路默认排在最后
+     */
+    private int nextSortOrder() {
+        HolidaysTour last = holidaysTourMapper.selectOne(Wrappers.<HolidaysTour>lambdaQuery()
+            .select(HolidaysTour::getSortOrder)
+            .orderByDesc(HolidaysTour::getSortOrder)
+            .last("limit 1"), false);
+        return last == null || last.getSortOrder() == null ? 1 : last.getSortOrder() + 1;
+    }
 
     /**
      * 保存前的数据校验

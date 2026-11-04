@@ -67,6 +67,15 @@ public interface IHolidaysTourService {
      */
     Boolean updateStatus(Long id, Long status);
 
+    /**
+     * 修改线路展示排序
+     *
+     * @param id 主键
+     * @param sortOrder 排序值，越小越靠前
+     * @return 是否修改成功
+     */
+    Boolean updateSortOrder(Long id, Integer sortOrder);
+
 
     /**
      * 校验并批量删除线路管理信息

@@ -102,6 +102,16 @@ public class HolidaysTourController extends BaseController {
         return toAjax(holidaysTourService.updateStatus(bo.getId(), bo.getStatus()));
     }
 
+    /**
+     * 修改线路展示排序
+     */
+    @SaCheckPermission("boxhilltravel_manager:tour:edit")
+    @Log(title = "线路管理", businessType = BusinessType.UPDATE)
+    @PutMapping("/changeSortOrder")
+    public R<Void> changeSortOrder(@RequestBody HolidaysTourBo bo) {
+        return toAjax(holidaysTourService.updateSortOrder(bo.getId(), bo.getSortOrder()));
+    }
+
 
     /**
      * 删除线路管理

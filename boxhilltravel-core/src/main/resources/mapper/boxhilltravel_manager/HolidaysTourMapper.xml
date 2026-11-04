@@ -24,6 +24,7 @@
                latest_arrival_time,
                earliest_departure_time,
                status,
+               sort_order,
                version,
                seo_title,
                seo_description,
@@ -105,7 +106,9 @@
                 order by ${query.sortField}
                 <if test="query.sortDirection != null and query.sortDirection != ''">
                     ${query.sortDirection}
-                </if>
+                </if>,
+                sort_order asc,
+                id desc
             </when>
             <when test="query != null and query.keyword != null and query.keyword != ''">
                 order by
@@ -123,10 +126,11 @@
                         ) then 60
                         else 0
                     end desc,
+                    sort_order asc,
                     id desc
             </when>
             <otherwise>
-                order by id desc
+                order by sort_order asc, id desc
             </otherwise>
         </choose>
     </select>

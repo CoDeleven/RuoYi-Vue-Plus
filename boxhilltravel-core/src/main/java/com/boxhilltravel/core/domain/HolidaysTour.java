@@ -145,6 +145,11 @@ public class HolidaysTour extends BaseEntity {
     private Long status;
 
     /**
+     * 展示排序，数值越小越靠前
+     */
+    private Integer sortOrder;
+
+    /**
      * 版本号(乐观锁)
      */
     @Version
