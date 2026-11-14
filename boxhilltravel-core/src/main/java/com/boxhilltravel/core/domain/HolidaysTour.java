@@ -125,6 +125,11 @@ public class HolidaysTour extends BaseEntity {
     private String mapImage;
 
     /**
+     * 图册(多图，OSS id 用逗号分隔)
+     */
+    private String images;
+
+    /**
      * ????
      */
     private String notes;

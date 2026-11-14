@@ -20,6 +20,7 @@
                currency,
                cover_image,
                map_image,
+               images,
                notes,
                latest_arrival_time,
                earliest_departure_time,

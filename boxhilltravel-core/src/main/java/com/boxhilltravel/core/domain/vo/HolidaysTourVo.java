@@ -127,6 +127,16 @@ public class HolidaysTourVo implements Serializable {
     @Translation(type = TransConstant.OSS_ID_TO_URL)
     private String mapImageUrl;
     /**
+     * 图册(多图，OSS id 用逗号分隔)
+     */
+    private String images;
+
+    /**
+     * 图册Url(逗号分隔)
+     */
+    @Translation(type = TransConstant.OSS_ID_TO_URL)
+    private String imagesUrl;
+    /**
      * ????
      */
     private String notes;

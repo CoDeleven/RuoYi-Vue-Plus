@@ -134,6 +134,11 @@ public class HolidaysTourBo implements Serializable {
     private String mapImage;
 
     /**
+     * 图册(多图，OSS id 用逗号分隔)
+     */
+    private String images;
+
+    /**
      * ????
      */
     private String notes;

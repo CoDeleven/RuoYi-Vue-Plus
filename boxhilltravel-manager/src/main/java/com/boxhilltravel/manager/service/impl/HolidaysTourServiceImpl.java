@@ -75,6 +75,7 @@ public class HolidaysTourServiceImpl implements IHolidaysTourService {
         }
         holidaysTourVo.setCoverImageUrl(holidaysTourVo.getCoverImage());
         holidaysTourVo.setMapImageUrl(holidaysTourVo.getMapImage());
+        holidaysTourVo.setImagesUrl(holidaysTourVo.getImages());
         holidaysTourVo.setCollectionTag(resolveCollectionTag(id));
         fillCountryNames(List.of(holidaysTourVo));
         return holidaysTourVo;
@@ -95,6 +96,7 @@ public class HolidaysTourServiceImpl implements IHolidaysTourService {
         records.forEach(t -> {
             t.setCoverImageUrl(t.getCoverImage());
             t.setMapImageUrl(t.getMapImage());
+            t.setImagesUrl(t.getImages());
             // TODO 查询 holidays_tour_itinerary 表获取途径的国家
         });
         fillCollectionTags(records);
