@@ -7,7 +7,6 @@ import org.dromara.common.translation.constant.TransConstant;
 
 import java.io.Serial;
 import java.math.BigDecimal;
-import java.util.List;
 
 /**
  * Customer tour list item.
@@ -18,8 +17,6 @@ public class TourListItemVo extends TourCardVo {
 
     @Serial
     private static final long serialVersionUID = 1L;
-
-    private List<String> images;
 
     @Translation(type = TransConstant.OSS_ID_TO_URL)
     private String mapImage;

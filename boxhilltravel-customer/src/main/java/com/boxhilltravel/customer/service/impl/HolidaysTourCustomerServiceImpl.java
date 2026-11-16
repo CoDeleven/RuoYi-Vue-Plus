@@ -34,10 +34,12 @@ import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.json.utils.JsonUtils;
+import org.dromara.system.api.OssService;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -54,7 +56,7 @@ import java.util.stream.Collectors;
 public class HolidaysTourCustomerServiceImpl implements IHolidaysTourCustomerService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "duration_days", "sale_price");
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "duration_days", "sale_price", "sort_order");
     private static final Set<String> ALLOWED_SORT_DIRECTIONS = Set.of("asc", "desc");
 
     private final HolidaysTourMapper tourMapper;
@@ -66,6 +68,7 @@ public class HolidaysTourCustomerServiceImpl implements IHolidaysTourCustomerSer
     private final HolidaysHotDealTourMapper hotDealTourMapper;
     private final HolidaysFeaturedTourMapper featuredTourMapper;
     private final HolidaysDepartureMapper departureMapper;
+    private final OssService ossService;
 
     @Override
     public PageResult<TourListItemVo> queryPageList(QueryTourBo bo) {
@@ -208,6 +211,7 @@ public class HolidaysTourCustomerServiceImpl implements IHolidaysTourCustomerSer
         vo.setCurrency(tour.getCurrency());
         vo.setCoverImage(tour.getCoverImage());
         vo.setMapImage(tour.getMapImage());
+        vo.setImages(resolveImageUrls(tour.getImages()));
         vo.setNotes(tour.getNotes());
         vo.setLatestArrivalTime(tour.getLatestArrivalTime());
         vo.setEarliestDepartureTime(tour.getEarliestDepartureTime());
@@ -228,6 +232,7 @@ public class HolidaysTourCustomerServiceImpl implements IHolidaysTourCustomerSer
         vo.setName(tour.getName());
         vo.setDescription(tour.getDescription());
         vo.setCoverImage(tour.getCoverImage());
+        vo.setImages(resolveImageUrls(tour.getImages()));
         vo.setDurationDays(tour.getDurationDays());
         vo.setTravelStyle(toInteger(tour.getTravelStyle()));
         vo.setBasePrice(tour.getBasePrice());
@@ -237,6 +242,23 @@ public class HolidaysTourCustomerServiceImpl implements IHolidaysTourCustomerSer
         vo.setTripType(toInteger(tour.getTripType()));
         vo.setUpcomingDepartureDate(resolveUpcomingDepartureDate(tour.getId()));
         vo.setDestinations(queryDestinationsByTourId(tour.getId()).stream().map(DestinationVo::getName).toList());
+    }
+
+    /**
+     * 将逗号分隔的 OSS id 图册解析为访问地址列表
+     */
+    private List<String> resolveImageUrls(String ossIds) {
+        if (StringUtils.isBlank(ossIds)) {
+            return List.of();
+        }
+        String urls = ossService.selectUrlByIds(ossIds);
+        if (StringUtils.isBlank(urls)) {
+            return List.of();
+        }
+        return Arrays.stream(urls.split(","))
+            .map(StringUtils::trim)
+            .filter(StringUtils::isNotBlank)
+            .toList();
     }
 
     private void fillServiceItems(TourDetailVo vo, Long tourId) {

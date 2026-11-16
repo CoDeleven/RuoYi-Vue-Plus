@@ -31,6 +31,8 @@ public class TourCardVo implements Serializable {
     @Translation(type = TransConstant.OSS_ID_TO_URL)
     private String coverImage;
 
+    private List<String> images;
+
     private Integer durationDays;
 
     private Integer travelStyle;

@@ -52,6 +52,8 @@ public class TourDetailVo implements Serializable {
     @Translation(type = TransConstant.OSS_ID_TO_URL)
     private String mapImage;
 
+    private List<String> images;
+
     private String notes;
 
     private String latestArrivalTime;

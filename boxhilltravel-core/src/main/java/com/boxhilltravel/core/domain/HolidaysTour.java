@@ -125,6 +125,11 @@ public class HolidaysTour extends BaseEntity {
     private String mapImage;
 
     /**
+     * 图册(多图，OSS id 用逗号分隔)
+     */
+    private String images;
+
+    /**
      * ????
      */
     private String notes;
@@ -143,6 +148,11 @@ public class HolidaysTour extends BaseEntity {
      * 状态 0草稿 1上架 2下架
      */
     private Long status;
+
+    /**
+     * 展示排序，数值越小越靠前
+     */
+    private Integer sortOrder;
 
     /**
      * 版本号(乐观锁)
